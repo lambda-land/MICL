@@ -1,44 +1,28 @@
 module MICL where
 
-type Euclidean = (Int, Int, Int)
+type Channel = String
 
-data Sensor = Accelerometer Euclidean
-            | Gravity Euclidean
-            | Gyroscope Euclidean
-            | LinearAccel Euclidean
-            | Orientation Euclidean
-            | Proximity Euclidean
-            | RotationVect Euclidean
-            | Status [Sensor]
+data Signal = In Channel
+            | Out Channel
             deriving(Eq,Show)
 
-type User = String
+data Focus = Human
+           | System
+           | Shared
+           deriving(Eq,Show)
 
 data OpMode = Exception OpMode
-            | Recovery User
-            | Nominal User
-            | Wait
+            | Recovery Focus
+            | Nominal Focus
+            | Wait Focus
             deriving(Eq,Show)
 
-type Degrees = Int
+type Status = (Signal,OpMode)
+type Location = (Int,Int,Int)
 
-data CamMode = VideoOn
-             | VideoOff
-             | Capture
-             deriving(Eq,Show)
+{- combinator function -}
+instruction :: (Location,Status) -> Status
+instruction (l,(s,o)) = undefined
 
-data ZoomTy = Optical Bool
-            | Digital Bool
-            deriving(Eq,Show)
-
-data Cmd = Elevation Degrees
-         | Heading Degrees
-         | Bank Degrees
-         | Camera CamMode
-         | CamZoom ZoomTy Degrees
-         | CamPan Degrees
-         | CamTilt Degrees
-         | Seq [Cmd]
-         deriving(Eq,Show)
-
-type Domain = (Sensor,OpMode) -> (Cmd,OpMode)
+{- domain -}
+type D = (Location,Status) -> (Location,Status)

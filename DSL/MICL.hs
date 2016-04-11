@@ -3,7 +3,8 @@
         of commands to execute in order to navigate a route. The programmer is
         also going to provide a set of protocols for the human actor that
         describe goal-directed tasks for the human actor to complete as well as
-        how to recover from some potential exceptions
+        some additional information, and potentially how to recover from some
+        exceptions.
 -}
 
 module MICL where
@@ -48,8 +49,8 @@ data Flag = Exception Flag
 
 
 {- | a signal is an input to the drone or vehicle from the environment, the
-         program, or the user. proximity is based on location "in front" (in the
-         current path) of the device or vehicle.
+         program, or the user. proximity is based on location in the current
+         path of the device or vehicle.
      proximity: a value v = { p | p \geq 0.0 } in meters (environment)
      altitude: a value v = { a | a \geq 0.0 } in meters (environment)
      axis: a value v = { x | -180.0 \lt x \lt 180.0 } in degrees (environment)

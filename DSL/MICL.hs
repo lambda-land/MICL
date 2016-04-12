@@ -43,6 +43,7 @@ data Message = Up Float
 data Code = Broadening String
           | Narrowing String
           | Recovering String
+          | Empty
           deriving(Show)
 
 type OpMode = (Agent,Maybe Exception)
@@ -68,6 +69,7 @@ data Exception = Recovery
          to an external source. (user or program)
 -}
 data Signal = Proximity Float
+            | Altitude Float
             | Sensor { pitch :: Float,
                        roll :: Float,
                        yaw :: Float
@@ -93,46 +95,44 @@ type Interaction = (Location,OpMode) -> (Location,OpMode)
 {- | combinator functions
      instruction: takes a signal and a location, and updates the location based
          on the command issued (some messages don't change the location)
-     status: takes a signal and an operating mode, and updates the operating
-         mode based on some parameters of the external environment, or an input
-         from the system or the human agent
+     status: takes a signal a location and an operating mode, and updates the
+         operating mode based on some parameters of the external environment,
+         or an input from the system or the human agent
 -}
 instruction :: Signal -> Location -> Location
 instruction sig (lat,lng,ele) = case sig of
-  Command src msg -> case msg of
-    Up          f ->(lat,lng,(ele + f))
+  Altitude f       -> (lat,lng,f)
+  Command  src msg -> case msg of
+    Up          f -> (lat,lng,(ele + f))
     Down        f -> (lat,lng,(ele - f))
     Forward     f -> ((lat + f),lng,ele)
     Backward    f -> ((lat - f),lng,ele)
     StrafeLeft  f -> (lat,(lng - f),ele)
     StrafeRight f -> (lat,(lng + f),ele)
     _             -> (lat,lng,ele)
-  _               -> (lat,lng,ele)
+  _                -> (lat,lng,ele)
 
-status :: Signal -> OpMode -> OpMode
-status sig (foc,flg) = case sig of
-  Proximity f -> if f <= 0.1
-                 then
-                   (Human,Just (Wait))
-                 else (foc,flg)
+status :: Signal -> Location -> OpMode -> OpMode
+status sig (lat,lng,ele) (agt,exc) = case sig of
+  Proximity f  -> if f <= 0.1
+                  then (Human,Just (Wait))
+                  else (agt,exc)
+  Altitude f   -> if f <= (0.5 * ele)
+                  then (Human,Just (Wait))
+                  else (agt,exc)
   Sensor p r y -> if p <= -15.0 || p >= 15.0
-                  then
-                    (Human,Just (Wait))
-                  else
-                    if y <= -15.0 || y >= 15.0
-                    then
-                      (Human,Just (Wait))
-                    else (foc,flg)
-  Command s m -> case s of
-    User -> case (foc,flg) of
-      (System,_)               -> (Human ,flg)
+                  then (Human,Just (Wait))
+                  else (agt,exc)
+  Command s m  -> case s of
+    User    -> case (agt,exc) of
+      (System,_)               -> (Human ,exc)
       (Human ,Just (Recovery)) -> (Human ,Nothing)
       (Human ,Just (Wait))     -> (Human ,Just (Recovery))
       (Human ,Just (Return))   -> (System,Just (Wait))
-      _                        -> (foc   ,flg)
-    Program -> case (foc,flg) of
+      _                        -> (agt,exc)
+    Program -> case (agt,exc) of
       (Human ,_)               -> (Human ,Just (Wait))
       (System,Just (Recovery)) -> (System,Nothing)
       (System,Just (Wait))     -> (System,Just (Recovery))
       (System,Just (Return))   -> (Human ,Just (Wait))
-      _                        -> (foc   ,flg)
+      _                        -> (agt,exc)

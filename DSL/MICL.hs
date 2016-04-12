@@ -1,51 +1,61 @@
 {- | Mixed-Initiative Controller Language (Keeley Abbott -- 2016)
      Description: A programmer is going to give the device or vehicle a series
         of commands to execute in order to navigate a route. The programmer is
-        also going to provide a set of protocols for the human actor that
-        describe goal-directed tasks for the human actor to complete as well as
+        also going to provide a set of protocols for the human agent that
+        describe goal-directed tasks for the human agent to complete as well as
         some additional information, and potentially how to recover from some
         exceptions.
 -}
 
 module MICL where
 
-import StepCodes
-
-{- | a message is an output to the drone or vehicle (or in the case of a
-         Protocol message to the user) from the program.
+{- | a message is an instruction for the drone or vehicle (or in the case of
+         a Task it is a message to the user) from the program or the human
+         agent.
      up/down: a value v = { e \forall e \in \mathbb{R} } in meters
-     clock/counter: a value v = { c | -180.0 \lt c \lt 180.0 } in degrees
      forward/backward: a value v = { f \forall f \in \mathbb{R} } in meters
      strafe left/right: a value v = { s \forall s \in \mathbb{R} } in meters
      turn left/right: a value v = { t | -180.0 \lt t \lt 180.0 } in degrees
-     protocol: a string with goal-directed task(s) for the user to complete, or
-         additional information needed to complete the program
+     task: a string with goal-directed instruction(s) for the user to complete,
+         or additional information needed to complete the program
 -}
 data Message = Up Float
              | Down Float
-             | Clockwise Float
-             | CounterClock Float
              | Forward Float
              | Backward Float
              | StrafeLeft Float
              | StrafeRight Float
              | TurnLeft Float
              | TurnRight Float
-             | Protocol Code
+             | Task Code String
              deriving(Show)
 
-type OpMode = (Focus,Flag)
 
-data Focus = Human
+{- | a code is a feature that give some additional information to the human
+         actor about completing a task.
+     broadening: provides clues to help the human agent know how far they can
+         diverge from the protocol steps
+     narrowing: calls attention to especially important items for the human
+         agent in completing the protocol steps
+     recovering: provides clues to help the human agent recover from potential
+         errors (possibly caused by straying from a previous protocol step)
+-}
+data Code = Broadening String
+          | Narrowing String
+          | Recovering String
+          deriving(Show)
+
+type OpMode = (Agent,Maybe Exception)
+
+data Agent = Human
            | System
            deriving(Show)
 
-data Flag = Exception Flag
-          | Recovery
-          | Nominal
-          | Return
-          | Wait
-          deriving(Show)
+data Exception = Recovery
+               | Nominal
+               | Return
+               | Wait
+               deriving(Show)
 
 
 {- | a signal is an input to the drone or vehicle from the environment, the
@@ -62,7 +72,7 @@ data Signal = Proximity Float
                        roll :: Float,
                        yaw :: Float
                      }
-            | Command Source
+            | Command Source Message
             deriving(Show)
 
 data Source = User
@@ -81,43 +91,48 @@ type Interaction = (Location,OpMode) -> (Location,OpMode)
 
 
 {- | combinator functions
+     instruction: takes a signal and a location, and updates the location based
+         on the command issued (some messages don't change the location)
+     status: takes a signal and an operating mode, and updates the operating
+         mode based on some parameters of the external environment, or an input
+         from the system or the human agent
 -}
-instruction :: Message -> Location -> Location
-instruction msg (lat,lng,ele) = case msg of
-  Up          f -> (lat,lng,(ele + f))
-  Down        f -> (lat,lng,(ele - f))
-  Forward     f -> ((lat + f),lng,ele)
-  Backward    f -> ((lat - f),lng,ele)
-  StrafeLeft  f -> (lat,(lng - f),ele)
-  StrafeRight f -> (lat,(lng + f),ele)
-  _             -> (lat,lng,ele)
+instruction :: Signal -> Location -> Location
+instruction sig (lat,lng,ele) = case sig of
+  Command src msg -> case msg of
+    Up          f ->(lat,lng,(ele + f))
+    Down        f -> (lat,lng,(ele - f))
+    Forward     f -> ((lat + f),lng,ele)
+    Backward    f -> ((lat - f),lng,ele)
+    StrafeLeft  f -> (lat,(lng - f),ele)
+    StrafeRight f -> (lat,(lng + f),ele)
+    _             -> (lat,lng,ele)
+  _               -> (lat,lng,ele)
 
 status :: Signal -> OpMode -> OpMode
 status sig (foc,flg) = case sig of
   Proximity f -> if f <= 0.1
                  then
-                   (Human,Exception Wait)
+                   (Human,Just (Wait))
                  else (foc,flg)
   Sensor p r y -> if p <= -15.0 || p >= 15.0
                   then
-                    (Human,Exception Wait)
+                    (Human,Just (Wait))
                   else
                     if y <= -15.0 || y >= 15.0
                     then
-                      (Human,Exception Wait)
+                      (Human,Just (Wait))
                     else (foc,flg)
-  Command s -> case s of
+  Command s m -> case s of
     User -> case (foc,flg) of
-      (System,_)                  -> (Human ,flg)
-      (Human ,Exception Recovery) -> (Human ,Nominal)
-      (Human ,Exception Wait)     -> (Human ,Exception Recovery)
-      (Human ,Return)             -> (System,Wait)
-      (Human ,Wait)               -> (Human ,Nominal)
-      _                           -> (foc   ,flg)
+      (System,_)               -> (Human ,flg)
+      (Human ,Just (Recovery)) -> (Human ,Nothing)
+      (Human ,Just (Wait))     -> (Human ,Just (Recovery))
+      (Human ,Just (Return))   -> (System,Just (Wait))
+      _                        -> (foc   ,flg)
     Program -> case (foc,flg) of
-      (Human ,_)                  -> (Human ,Exception Wait)
-      (System,Exception Recovery) -> (System,Nominal)
-      (System,Exception Wait)     -> (System,Exception Recovery)
-      (System,Return)             -> (Human ,Wait)
-      (System,Wait)               -> (System,Nominal)
-      _                           -> (foc   ,flg)
+      (Human ,_)               -> (Human ,Just (Wait))
+      (System,Just (Recovery)) -> (System,Nothing)
+      (System,Just (Wait))     -> (System,Just (Recovery))
+      (System,Just (Return))   -> (Human ,Just (Wait))
+      _                        -> (foc   ,flg)

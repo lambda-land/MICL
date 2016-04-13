@@ -19,10 +19,12 @@ type State = (Servos,Display,Status)
 
 -- | floating point values are most commonly given in 0.25 increments to
 --       indicate the amount of power being sent to each of the engines.
---   user: identifies the agent currently in control of providing commands to
---       the drone
 --   sequence: is an integer value representing the command's location in the
 --       sequence of all other commands
+--   channel: interprets how the drone receives commands (either from the user
+--       or the computer):
+--           * a value of false indicates a human agent
+--           * a value of true indicates a computer agent
 --   flag: interprets how the drone interprets the progressive commands from the
 --       user or the program:
 --           * bit 0: enable/disable progressive commands
@@ -49,8 +51,8 @@ type State = (Servos,Display,Status)
 --           * a negative value will make the drone spin (turn) left
 --           * a positive value will make the drone spin (turn) right
 --
-data Signal = Signal { user :: Agent,
-                       index :: Int,
+data Signal = Signal { index :: Int,
+                       channel :: Bool,
                        flag :: Int32,
                        roll :: Float,
                        pitch :: Float,
@@ -72,7 +74,7 @@ data Mode = Recovery
           | Wait
 
 
--- | move functions that take a signal and apply the appropriate servo
+-- | servo functions that take a signal and apply the appropriate servo
 --       changes (the range of input from the signal is -1.0 to 1.0 in
 --       0.25 increments representing 1/4 powers of engine speed).
 --
@@ -95,44 +97,59 @@ moveDown :: Signal -> Servos -> Servos
 moveDown sig srv = mapSignal (flip (-) (get_g sig)) srv
 
 
--- | status functions that take a signal and update the agent of the drone
---       based on the agent providing the commands to the controller.
+-- | status functions
+--   switchAgent: takes a signal and a status and updates the agent of the drone
+--       based on the channel
+--   switchMode: takes a status and updates it based on the current mode of the
+--       drone
 --
-switchHum :: Signal -> Status -> Status
-switchHum sig sts = case (get_u sig) of
-  Human -> sts
-  _     -> (Human,snd sts)
+switchAgent :: Signal -> Agent
+switchAgent sig = case (get_c sig) of
+  True -> Computer
+  _    -> Human
 
-switchCmp :: Signal -> Status -> Status
-switchCmp sig sts = case (get_u sig) of
-  Computer -> sts
-  _        -> (Computer,snd sts)
-
-
--- | status function that takes a signal and updates the mode of the drone
---       based on the previous status.
---
-switchMode :: Signal -> Status -> Status
-switchMode sig sts = case (snd sts) of
-  Recovery -> (fst sts,Normal)
-  Normal   -> (fst sts,Wait)
-  Return   -> case (fst sts) of
-    Human    -> (Computer,Normal)
-    Computer -> (Human,Normal)
-  Wait     -> (fst sts,Recovery)
+switchMode :: Status -> Mode
+switchMode sts = case (snd sts) of
+  Recovery -> Normal
+  Normal   -> Wait
+  Return   -> Normal
+  Wait     -> Recovery
 
 
 -- | combinator functions
+--   status: takes a signal and a status and updates the status
 --
+status :: Signal -> Status -> Status
+status sig sts = case (snd sts) of
+  Return -> case (get_c sig) of
+    True -> (Human   ,switchMode sts)
+    _    -> (Computer,switchMode sts)
+  _      -> (switchAgent sig,switchMode sts)
+
+movement :: Signal -> Servos -> Servos
+movement sig srv
+  | (get_r sig) < 0 = moveLeft sig srv
+  | (get_r sig) > 0 = moveRght sig srv
+  | (get_p sig) < 0 = moveFwd  sig srv
+  | (get_p sig) > 0 = moveBack sig srv
+  | (get_g sig) < 0 = moveDown sig srv
+  | (get_g sig) > 0 = moveUp   sig srv
+  | otherwise       = srv
+
+task :: Signal -> Display -> Display
+task = undefined
+
+interaction :: Signal -> Servos -> Display -> Status -> (Servos,Display,Status)
+interaction sig srv dis sts = (movement sig srv,task sig dis,status sig sts)
 
 
 -- | record accessing helper functions for the signals
 --
-get_u :: Signal -> Agent
-get_u = user
-
 get_i :: Signal -> Int
 get_i = index
+
+get_c :: Signal -> Bool
+get_c = channel
 
 get_f :: Signal -> Int32
 get_f = flag

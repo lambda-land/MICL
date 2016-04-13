@@ -9,130 +9,175 @@
 
 module MICL where
 
-{- | a message is an instruction for the drone or vehicle (or in the case of
-         a Task it is a message to the user) from the program or the human
-         agent.
-     up/down: a value v = { e \forall e \in \mathbb{R} } in meters
-     forward/backward: a value v = { f \forall f \in \mathbb{R} } in meters
-     strafe left/right: a value v = { s \forall s \in \mathbb{R} } in meters
-     turn left/right: a value v = { t | -180.0 \lt t \lt 180.0 } in degrees
-     task: a string with goal-directed instruction(s) for the user to complete,
-         or additional information needed to complete the program
--}
-data Message = Up Float
-             | Down Float
-             | Forward Float
-             | Backward Float
-             | StrafeLeft Float
-             | StrafeRight Float
-             | TurnLeft Float
-             | TurnRight Float
-             | Task Code String
-             deriving(Show)
+import Data.Int
+import System.IO
+
+type Domain = Signal -> State
+
+type State = (Servos,Display,Status)
 
 
-{- | a code is a feature that give some additional information to the human
-         actor about completing a task.
-     broadening: provides clues to help the human agent know how far they can
-         diverge from the protocol steps
-     narrowing: calls attention to especially important items for the human
-         agent in completing the protocol steps
-     recovering: provides clues to help the human agent recover from potential
-         errors (possibly caused by straying from a previous protocol step)
--}
-data Code = Broadening String
-          | Narrowing String
-          | Recovering String
-          | Empty
-          deriving(Show)
+-- | floating point values are most commonly given in 0.25 increments to
+--       indicate the amount of power being sent to each of the engines.
+--   user: identifies the agent currently in control of providing commands to
+--       the drone
+--   sequence: is an integer value representing the command's location in the
+--       sequence of all other commands
+--   flag: interprets how the drone interprets the progressive commands from the
+--       user or the program:
+--           * bit 0: enable/disable progressive commands
+--                    if set to zero will put the drone in a "hover" state
+--                    if set to one will make the drone consider the values of
+--                        progressive commands
+--           * bit 1: enable/disable combined yaw
+--                    if set to zero will consider yaw arguments passed
+--                    if set to one will ignore yaw arguments (for base turns)
+--           * bit 2-31: are not used, so are set to 0
+--   roll: drone left/right tilt value v = { r | -1.0 \leq r \leq 1.0 }
+--           * a negative value will make the drone tilt left, thus move left
+--           * a positive value will make the drone tilt right, thus move right
+--   pitch: drone front/back tilt value v = { p | -1.0 \leq p \leq 1.0 }
+--           * a negative value will make the drone lower it's front, thus move
+--             forward
+--           * a negative value will make the drone raise it's front, thus move
+--             backward
+--   gaz: drone vertical speed value v = { g | -1.0 \leq g \leq 1.0 }
+--           * a negative value will decrease power to all engines, thus move
+--             down
+--           * a positive value will increase power to all engines, thus move up
+--   yaw: drone angular speed value v = { y | -1.0 \leq y \leq 1.0 }
+--           * a negative value will make the drone spin (turn) left
+--           * a positive value will make the drone spin (turn) right
+--
+data Signal = Signal { user :: Agent,
+                       index :: Int,
+                       flag :: Int32,
+                       roll :: Float,
+                       pitch :: Float,
+                       gaz :: Float,
+                       yaw :: Float }
 
-type OpMode = (Agent,Maybe Exception)
+type Servos = (Float,Float,Float,Float)
+
+type Display = IO ()
+
+type Status = (Agent,Mode)
 
 data Agent = Human
-           | System
-           deriving(Show)
+           | Computer
 
-data Exception = Recovery
-               | Nominal
-               | Return
-               | Wait
-               deriving(Show)
+data Mode = Recovery
+          | Normal
+          | Return
+          | Wait
 
 
-{- | a signal is an input to the drone or vehicle from the environment, the
-         program, or the user. proximity is based on location in the current
-         path of the device or vehicle.
-     proximity: a value v = { p | p \geq 0.0 } in meters (environment)
-     altitude: a value v = { a | a \geq 0.0 } in meters (environment)
-     axis: a value v = { x | -180.0 \lt x \lt 180.0 } in degrees (environment)
-     command: input received via the radio transmitter or some other connection
-         to an external source. (user or program)
--}
-data Signal = Proximity Float
-            | Altitude Float
-            | Sensor { pitch :: Float,
-                       roll :: Float,
-                       yaw :: Float
-                     }
-            | Command Source Message
-            deriving(Show)
+-- | move functions that take a signal and apply the appropriate servo
+--       changes (the range of input from the signal is -1.0 to 1.0 in
+--       0.25 increments representing 1/4 powers of engine speed).
+--
+moveLeft :: Signal -> Servos -> Servos
+moveLeft sig srv = mapLeftSignal (flip (-) (get_r sig)) srv
 
-data Source = User
-            | Program
-            deriving(Show)
+moveRght :: Signal -> Servos -> Servos
+moveRght sig srv = mapRghtSignal (+ (get_r sig)) srv
 
+moveFwd :: Signal -> Servos -> Servos
+moveFwd sig srv = mapFrntSignal (flip (-) (get_p sig)) srv
 
-{- | domain
--}
-type Latitude = Float
-type Longitude = Float
-type Elevation = Float
-type Location = (Latitude,Longitude,Elevation)
+moveBack :: Signal -> Servos -> Servos
+moveBack sig srv = mapBackSignal (+ (get_p sig)) srv
 
-type Interaction = (Location,OpMode) -> (Location,OpMode)
+moveUp :: Signal -> Servos -> Servos
+moveUp sig srv = mapSignal (+ (get_g sig)) srv
+
+moveDown :: Signal -> Servos -> Servos
+moveDown sig srv = mapSignal (flip (-) (get_g sig)) srv
 
 
-{- | combinator functions
-     instruction: takes a signal and a location, and updates the location based
-         on the command issued (some messages don't change the location)
-     status: takes a signal a location and an operating mode, and updates the
-         operating mode based on some parameters of the external environment,
-         or an input from the system or the human agent
--}
-instruction :: Signal -> Location -> Location
-instruction sig (lat,lng,ele) = case sig of
-  Altitude f       -> (lat,lng,f)
-  Command  src msg -> case msg of
-    Up          f -> (lat,lng,(ele + f))
-    Down        f -> (lat,lng,(ele - f))
-    Forward     f -> ((lat + f),lng,ele)
-    Backward    f -> ((lat - f),lng,ele)
-    StrafeLeft  f -> (lat,(lng - f),ele)
-    StrafeRight f -> (lat,(lng + f),ele)
-    _             -> (lat,lng,ele)
-  _                -> (lat,lng,ele)
+-- | status functions that take a signal and update the agent of the drone
+--       based on the agent providing the commands to the controller.
+--
+switchHum :: Signal -> Status -> Status
+switchHum sig sts = case (get_u sig) of
+  Human -> sts
+  _     -> (Human,snd sts)
 
-status :: Signal -> Location -> OpMode -> OpMode
-status sig (lat,lng,ele) (agt,exc) = case sig of
-  Proximity f  -> if f <= 0.1
-                  then (Human,Just (Wait))
-                  else (agt,exc)
-  Altitude f   -> if f <= (0.5 * ele)
-                  then (Human,Just (Wait))
-                  else (agt,exc)
-  Sensor p r y -> if p <= -15.0 || p >= 15.0
-                  then (Human,Just (Wait))
-                  else (agt,exc)
-  Command s m  -> case s of
-    User    -> case (agt,exc) of
-      (System,_)               -> (Human ,exc)
-      (Human ,Just (Recovery)) -> (Human ,Nothing)
-      (Human ,Just (Wait))     -> (Human ,Just (Recovery))
-      (Human ,Just (Return))   -> (System,Just (Wait))
-      _                        -> (agt,exc)
-    Program -> case (agt,exc) of
-      (Human ,_)               -> (Human ,Just (Wait))
-      (System,Just (Recovery)) -> (System,Nothing)
-      (System,Just (Wait))     -> (System,Just (Recovery))
-      (System,Just (Return))   -> (Human ,Just (Wait))
-      _                        -> (agt,exc)
+switchCmp :: Signal -> Status -> Status
+switchCmp sig sts = case (get_u sig) of
+  Computer -> sts
+  _        -> (Computer,snd sts)
+
+
+-- | status function that takes a signal and updates the mode of the drone
+--       based on the previous status.
+--
+switchMode :: Signal -> Status -> Status
+switchMode sig sts = case (snd sts) of
+  Recovery -> (fst sts,Normal)
+  Normal   -> (fst sts,Wait)
+  Return   -> case (fst sts) of
+    Human    -> (Computer,Normal)
+    Computer -> (Human,Normal)
+  Wait     -> (fst sts,Recovery)
+
+
+-- | combinator functions
+--
+
+
+-- | record accessing helper functions for the signals
+--
+get_u :: Signal -> Agent
+get_u = user
+
+get_i :: Signal -> Int
+get_i = index
+
+get_f :: Signal -> Int32
+get_f = flag
+
+get_r :: Signal -> Float
+get_r = roll
+
+get_p :: Signal -> Float
+get_p = pitch
+
+get_g :: Signal -> Float
+get_g = gaz
+
+get_y :: Signal -> Float
+get_y = yaw
+
+
+-- | mapping function to apply changes to all servos based on a signal
+--
+mapSignal :: (a -> b) -> (a,a,a,a) -> (b,b,b,b)
+mapSignal f (a1,a2,a3,a4) = (f a1,f a2,f a3,f a4)
+
+mapFrntSignal :: (a -> b) -> (a,a,a,a) -> (b,b,a,a)
+mapFrntSignal f (a1,a2,a3,a4) = (f a1,f a2,a3,a4)
+
+mapBackSignal :: (a -> b) -> (a,a,a,a) -> (a,a,b,b)
+mapBackSignal f (a1,a2,a3,a4) = (a1,a2,f a3,f a4)
+
+mapLeftSignal :: (a -> b) -> (a,a,a,a) -> (b,a,b,a)
+mapLeftSignal f (a1,a2,a3,a4) = (f a1,a2,f a3,a4)
+
+mapRghtSignal :: (a -> b) -> (a,a,a,a) -> (a,b,a,b)
+mapRghtSignal f (a1,a2,a3,a4) = (a1,f a2,a3,f a4)
+
+
+-- | accessing individual servos
+--
+fstServ :: Servos -> Float
+fstServ (a,b,c,d) = a
+
+sndServ :: Servos -> Float
+sndServ (a,b,c,d) = b
+
+thrdServ :: Servos -> Float
+thrdServ (a,b,c,d) = c
+
+frthServ :: Servos -> Float
+frthServ (a,b,c,d) = d

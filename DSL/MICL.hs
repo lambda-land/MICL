@@ -11,10 +11,7 @@ module MICL where
 
 import Data.Int
 
-type Domain = Signal -> State
-
-type State = (Servos,Display,Status)
-
+import Display
 
 -- | floating point values indicate the amount of voltage (power) being
 --       transferred to the servos spinning the props.
@@ -59,7 +56,7 @@ data Signal = Signal { sequence :: Int,
 
 type Servos = (Float,Float,Float,Float)
 
-type Display = String
+type Display = TaskDB
 
 type Status = (Agent,Mode)
 
@@ -80,19 +77,19 @@ data Mode = Recovery
 --
 moveLat :: Signal -> Servos -> Servos
 moveLat sig srv
-  | (roll sig) < 0 = mapLeftSignal (flip (-) (roll sig)) srv
+  | (roll sig) < 0 = mapLeftSignal (+ (roll sig)) srv
   | (roll sig) > 0 = mapRghtSignal (+ (roll sig)) srv
   | otherwise      = srv
 
 moveLong :: Signal -> Servos -> Servos
 moveLong sig srv
-  | (pitch sig) < 0 = mapFrntSignal (flip (-) (pitch sig)) srv
+  | (pitch sig) < 0 = mapFrntSignal (+ (pitch sig)) srv
   | (pitch sig) > 0 = mapBackSignal (+ (pitch sig)) srv
   | otherwise     = srv
 
-moveElev :: Signal -> Servos -> Servos
-moveElev sig srv
-  | (gaz sig) < 0 = mapSignal (flip (-) (gaz sig)) srv
+moveVert :: Signal -> Servos -> Servos
+moveVert sig srv
+  | (gaz sig) < 0 = mapSignal (+ (gaz sig)) srv
   | (gaz sig) > 0 = mapSignal (+ (gaz sig)) srv
   | otherwise     = srv
 
@@ -117,8 +114,19 @@ switchMode sts = case (snd sts) of
 
 
 -- | combinator functions
+--   movement: takes a signal and servos and updates the servos
 --   status: takes a signal and a status and updates the status
+--   task: takes a signal and a display and updates the display
+--   interaction: takes a list of signals, servos, the display, and a status and
+--       updates the state
 --
+movement :: Signal -> Servos -> Servos
+movement sig srv = (moveLat sig (moveLong sig (moveVert sig srv)))
+
+movements :: [Signal] -> Servos -> Servos
+movements []     srv = srv
+movements (s:ss) srv = (movement s (movements ss srv))
+
 status :: Signal -> Status -> Status
 status sig sts = case (snd sts) of
   Recovery -> (fst sts,switchMode sts)
@@ -128,21 +136,28 @@ status sig sts = case (snd sts) of
   Wait     -> (fst sts,switchMode sts)
   _        -> sts
 
-movement :: Signal -> Servos -> Servos
-movement sig srv
-  | (roll sig)  /= 0 = moveLat  sig srv
-  | (pitch sig) /= 0 = moveLong sig srv
-  | (gaz sig)   /= 0 = moveElev sig srv
-
-movements :: [Signal] -> Servos -> Servos
-movements []     srv = srv
-movements (s:ss) srv = movement s (movements ss srv)
+status' :: [Signal] -> Status -> Status
+status' []     sts = sts
+status' (s:ss) sts = (status s (status' ss sts))
 
 task :: Signal -> Display -> Display
-task = undefined
+task sig []  = error "no task to display"
+task sig dis = dis
 
-interaction :: Signal -> Servos -> Display -> Status -> (Servos,Display,Status)
-interaction sig srv dis sts = (movement sig srv,task sig dis,status sig sts)
+tasks :: [Signal] -> Display -> Display
+tasks []     dis = dis
+tasks (s:ss) dis = (task s (tasks ss dis))
+
+interaction :: [Signal] -> Servos -> Display -> Status -> (Servos,Display,Status)
+interaction []  srv dis sts = (srv,dis,sts)
+interaction sig srv dis sts = (movements sig srv,tasks sig dis,status' sig sts)
+
+
+-- | semantic domain
+--
+type Domain = Signal -> State
+
+type State = (Servos,Display,Status)
 
 
 -- | mapping function to apply changes to the correct servos based on a signal.

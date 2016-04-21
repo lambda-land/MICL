@@ -9,10 +9,6 @@
 
 module MICL where
 
-import Data.Int
-
-import Display
-
 -- | floating point values indicate the amount of voltage (power) being
 --       transferred to the servos spinning the props.
 --   sequence: is an integer value representing the command's location in the
@@ -22,12 +18,12 @@ import Display
 --   flag: interprets how the drone interprets the progressive commands from the
 --       user or the program:
 --           * bit 0: enable/disable progressive commands
---                    if set to zero will put the drone in a "hover" state
---                    if set to one will make the drone consider the values of
+--                    if set to true will put the drone in a "hover" state
+--                    if set to false will make the drone consider the values of
 --                        progressive commands
 --           * bit 1: enable/disable combined yaw
---                    if set to zero will consider yaw arguments passed
---                    if set to one will ignore yaw arguments (for base turns)
+--                    if set to true will consider yaw arguments passed
+--                    if set to false will ignore yaw arguments (for base turns)
 --           * bit 2-31: are not used, so are set to 0
 --   roll: drone left/right tilt value v = { r | -1.0 \leq r \leq 1.0 }
 --           * a negative value will make the drone tilt left, thus move left
@@ -45,20 +41,14 @@ import Display
 --           * a negative value will make the drone spin (turn) left
 --           * a positive value will make the drone spin (turn) right
 --
-data Signal = Signal { sequence :: Int,
-                       channel :: Agent,
-                       flag :: Int32,
+data Signal = Signal { channel :: Agent,
+                       mode :: Mode,
+                       flag :: Flag,
                        roll :: Float,
                        pitch :: Float,
                        gaz :: Float,
                        yaw :: Float }
             deriving(Show)
-
-type Servos = (Float,Float,Float,Float)
-
-type Display = TaskDB
-
-type Status = (Agent,Mode)
 
 data Agent = Human
            | Computer
@@ -70,133 +60,139 @@ data Mode = Recovery
           | Wait
           deriving(Show)
 
+data Flag = Bit0 Bool
+          | Bit1 Bool
+          | Bits Flag Flag
+          deriving(Show)
+
+data Servos = Servos { leftFront :: Float,
+                       rightFront :: Float,
+                       leftRear :: Float,
+                       rightRear :: Float }
+            deriving(Show)
+
+type Display = [String]
+
+type OpMode = (Agent,Mode)
+
 
 -- | movement functions
 --   take a signal and apply the appropriate servo changes (the range of input
 --       from the signal is -1.0 to 1.0).
+--   moveLat: moves the drone latitudinally (dips the left or right side of the
+--       drone).
+--   moveLong: moves the drone longitudinally (dips the front or rear side of
+--       the drone).
+--   moveVert: moves the drone vertically (increases or decreases speed to all
+--       of the servos).
+--   moveSpin: spins the drone in place either left or right.
 --
-moveLat :: Signal -> Servos -> Servos
-moveLat sig srv
-  | (roll sig) < 0 = mapLeftSignal (+ (roll sig)) srv
-  | (roll sig) > 0 = mapRghtSignal (+ (roll sig)) srv
-  | otherwise      = srv
+moveLat :: Float -> Servos -> Servos
+moveLat f srv
+  | f < 0     = srv { leftRear = (leftRear srv) +  f,
+                      rightRear = (rightRear srv) +  f }
+  | f > 0     = srv { leftFront = (leftFront srv) + f,
+                      rightFront = (rightFront srv) + f }
+  | otherwise = srv
 
-moveLong :: Signal -> Servos -> Servos
-moveLong sig srv
-  | (pitch sig) < 0 = mapFrntSignal (+ (pitch sig)) srv
-  | (pitch sig) > 0 = mapBackSignal (+ (pitch sig)) srv
-  | otherwise     = srv
+moveLong :: Float -> Servos -> Servos
+moveLong f srv
+  | f < 0     = srv { leftRear = (leftRear srv) + f,
+                      rightRear = (rightRear srv) + f }
+  | f > 0     = srv { leftFront = (leftFront srv) + f,
+                      rightFront = (rightFront srv) + f }
+  | otherwise = srv
 
-moveVert :: Signal -> Servos -> Servos
-moveVert sig srv
-  | (gaz sig) < 0 = mapSignal (+ (gaz sig)) srv
-  | (gaz sig) > 0 = mapSignal (+ (gaz sig)) srv
-  | otherwise     = srv
+moveVert :: Float -> Servos -> Servos
+moveVert f srv
+  | f /= 0    = srv { leftFront = (leftFront srv) + f,
+                      rightFront = (rightFront srv) + f,
+                      leftRear = (leftRear srv) + f,
+                      rightRear = (rightRear srv) + f }
+  | otherwise = srv
+
+moveSpin :: Float -> Servos -> Servos
+moveSpin f srv
+  | f < 0     = srv { rightFront = (rightFront srv) + f,
+                      leftRear = (leftRear srv) + f }
+  | f > 0     = srv { leftFront = (leftFront srv) + f,
+                      rightRear = (rightRear srv) + f }
+  | otherwise = srv
 
 
--- | status functions
---   switchAgent: takes a signal and a status and updates the agent of the drone
---       based on the channel
---   switchMode: takes a status and updates it based on the current mode of the
+-- | combinator functions
+--   move: takes a signal and servos and updates the servos
+--   display: takes a signal and a display and updates the display
+--   updateAgent: takes a signal and switches the agent of the drone based on
+--       the channel
+--   updateMode: takes a status and updates it based on the current mode of the
 --       drone
 --
+movement :: Signal -> Servos -> Servos
+movement sig srv = (moveLat (roll sig)
+                    (moveLong (pitch sig)
+                     (moveVert (gaz sig)
+                      (moveSpin (yaw sig) srv))))
+
+display :: Signal -> Display -> Display
+display sig []  = error "no task to display"
+display sig dis = dis
+
 switchAgent :: Signal -> Agent
 switchAgent sig = case (channel sig) of
   Computer -> Human
   Human    -> Computer
 
-switchMode :: Status -> Mode
-switchMode sts = case (snd sts) of
-  Recovery -> Normal
-  Return   -> Normal
-  Wait     -> Recovery
-  _        -> (snd sts)
-
-
--- | combinator functions
---   movement: takes a signal and servos and updates the servos
---   status: takes a signal and a status and updates the status
---   task: takes a signal and a display and updates the display
---   interaction: takes a list of signals, servos, the display, and a status and
---       updates the state
---
-movement :: Signal -> Servos -> Servos
-movement sig srv = (moveLat sig (moveLong sig (moveVert sig srv)))
-
-movements :: [Signal] -> Servos -> Servos
-movements []     srv = srv
-movements (s:ss) srv = (movement s (movements ss srv))
-
-status :: Signal -> Status -> Status
-status sig sts = case (snd sts) of
-  Recovery -> (fst sts,switchMode sts)
-  Return -> case (channel sig) of
-    Computer -> (switchAgent sig,switchMode sts)
-    _        -> (switchAgent sig,switchMode sts)
-  Wait     -> (fst sts,switchMode sts)
-  _        -> sts
-
-status' :: [Signal] -> Status -> Status
-status' []     sts = sts
-status' (s:ss) sts = (status s (status' ss sts))
-
-task :: Signal -> Display -> Display
-task sig []  = error "no task to display"
-task sig dis = dis
-
-tasks :: [Signal] -> Display -> Display
-tasks []     dis = dis
-tasks (s:ss) dis = (task s (tasks ss dis))
-
-interaction :: [Signal] -> Servos -> Display -> Status -> (Servos,Display,Status)
-interaction []  srv dis sts = (srv,dis,sts)
-interaction sig srv dis sts = (movements sig srv,tasks sig dis,status' sig sts)
+switchMode :: Signal -> Mode
+switchMode sig = case (mode sig) of
+  Return -> Wait
+  _      -> Normal
 
 
 -- | semantic domain
 --
-type Domain = Signal -> State
+type Domain = Signal -> Status -> Status
 
-type State = (Servos,Display,Status)
+type Status = (Servos,Display,OpMode)
 
 
--- | mapping function to apply changes to the correct servos based on a signal.
---   mapSignal: increases voltage (power) to all servos
---   mapFrntSignal: increases voltage (power) to the left rear and right rear
---       servos
---   mapBackSignal: increases voltage (power) to the left front and right front
---       servos
---   mapLeftSignal: increases voltage (power) to the right front and right rear
---       servos
---   mapRghtSignal: increases voltage (power) to the left front and left rear
---       servos
+-- | smart constructors
 --
-mapSignal :: (a -> b) -> (a,a,a,a) -> (b,b,b,b)
-mapSignal f (lf,rf,lr,rr) = (f lf,f rf,f lr,f rr)
+fullPower :: Float
+fullPower = 1.0
 
-mapFrntSignal :: (a -> b) -> (a,a,a,a) -> (a,a,b,b)
-mapFrntSignal f (lf,rf,lr,rr) = (lf,rf,f lr,f rr)
+halfPower :: Float
+halfPower = 0.5
 
-mapBackSignal :: (a -> b) -> (a,a,a,a) -> (b,b,a,a)
-mapBackSignal f (lf,rf,lr,rr) = (f lf,f rf,lr,rr)
+quarterPower :: Float
+quarterPower = 0.25
 
-mapLeftSignal :: (a -> b) -> (a,a,a,a) -> (a,b,a,b)
-mapLeftSignal f (lf,rf,lr,rr) = (lf,f rf,lr,f rr)
+zeroPower :: Float
+zeroPower = 0.0
 
-mapRghtSignal :: (a -> b) -> (a,a,a,a) -> (b,a,b,a)
-mapRghtSignal f (lf,rf,lr,rr) = (f lf,rf,f lr,rr)
+lat  f = signalDefault { roll = f }
+long f = signalDefault { pitch = f}
+vert f = signalDefault { gaz = f }
+spin f = signalDefault { yaw = f }
 
 
--- | accessing individual servos
+-- | default values
 --
-fstServ :: Servos -> Float
-fstServ (a,b,c,d) = a
+signalDefault = Signal { channel = Computer,
+                         mode = Normal,
+                         flag = Bits (Bit0 False) (Bit1 True),
+                         roll = zeroPower,
+                         pitch = zeroPower,
+                         gaz = zeroPower,
+                         yaw = zeroPower }
 
-sndServ :: Servos -> Float
-sndServ (a,b,c,d) = b
+servosDefault = Servos { leftFront = zeroPower,
+                      rightFront = zeroPower,
+                      leftRear = zeroPower,
+                      rightRear = zeroPower }
 
-thrdServ :: Servos -> Float
-thrdServ (a,b,c,d) = c
+displayDefault = []
 
-frthServ :: Servos -> Float
-frthServ (a,b,c,d) = d
+opModeDefault = (Computer,Normal)
+
+statusDefault = (servosDefault,displayDefault,opModeDefault)

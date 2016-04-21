@@ -1,18 +1,13 @@
 module Examples where
 
 import MICL
+import MonadicMICL
 
-liftOffHover :: [Signal]
-liftOffHover = [(Signal 1 Computer 1 0.0 0.0 1.0 0.0),(Signal 1 Computer 1 0.0 0.0 0.0 0.0)]
+import Control.Monad
+import Control.Monad.State
 
-initSrv :: Servos
-initSrv = (0.0,0.0,0.0,0.0)
-
-initDsply :: Display
-initDsply = ["taking off..."]
-
-initSts :: Status
-initSts = (Computer,Normal)
-
-takeOff :: State
-takeOff = interaction liftOffHover initSrv initDsply initSts
+prog1 = do move (vert fullPower)
+           move (vert fullPower)
+           move (vert halfPower)
+           move (lat (negate fullPower))
+           move (spin quarterPower)

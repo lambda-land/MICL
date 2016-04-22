@@ -15,6 +15,9 @@ module MICL where
 --       sequence of all other commands
 --   channel: interprets how the drone receives commands (either from the user
 --       or the computer agent)
+--   mode: indicates whether the drone is in a normal mode, recovering from some
+--       exception, in a wait status, or is ownership of the process is being
+--       returned to the human actor or the computer.
 --   flag: interprets how the drone interprets the progressive commands from the
 --       user or the program:
 --           * bit 0: enable/disable progressive commands
@@ -41,7 +44,8 @@ module MICL where
 --           * a negative value will make the drone spin (turn) left
 --           * a positive value will make the drone spin (turn) right
 --
-data Signal = Signal { channel :: Agent,
+data Signal = Signal { sequence :: Int,
+                       channel :: Agent,
                        mode :: Mode,
                        flag :: Flag,
                        roll :: Float,
@@ -89,10 +93,10 @@ type OpMode = (Agent,Mode)
 --
 moveLat :: Float -> Servos -> Servos
 moveLat f srv
-  | f < 0     = srv { leftRear = (leftRear srv) +  f,
+  | f < 0     = srv { rightFront = (rightFront srv) +  f,
                       rightRear = (rightRear srv) +  f }
   | f > 0     = srv { leftFront = (leftFront srv) + f,
-                      rightFront = (rightFront srv) + f }
+                      leftRear = (leftRear srv) + f }
   | otherwise = srv
 
 moveLong :: Float -> Servos -> Servos
@@ -170,10 +174,14 @@ quarterPower = 0.25
 zeroPower :: Float
 zeroPower = 0.0
 
-lat  f = signalDefault { roll = f }
-long f = signalDefault { pitch = f}
-vert f = signalDefault { gaz = f }
-spin f = signalDefault { yaw = f }
+up f = signalDefault { gaz = f }
+down f = signalDefault { gaz = (negate f) }
+left f = signalDefault { roll = (negate f) }
+right f = signalDefault { roll = f }
+forward f = signalDefault { pitch = (negate f) }
+reverse f = signalDefault { pitch = f }
+spinL f = signalDefault { yaw = f }
+spinR f = signalDefault { yaw = (negate f) }
 
 
 -- | default values

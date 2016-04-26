@@ -11,8 +11,6 @@ module MICL where
 
 -- | floating point values indicate the amount of voltage (power) being
 --       transferred to the servos spinning the props.
---   sequence: is an integer value representing the command's location in the
---       sequence of all other commands
 --   channel: interprets how the drone receives commands (either from the user
 --       or the computer agent)
 --   mode: indicates whether the drone is in a normal mode, recovering from some
@@ -44,8 +42,7 @@ module MICL where
 --           * a negative value will make the drone spin (turn) left
 --           * a positive value will make the drone spin (turn) right
 --
-data Signal = Signal { sequence :: Int,
-                       channel :: Agent,
+data Signal = Signal { channel :: Agent,
                        mode :: Mode,
                        flag :: Flag,
                        roll :: Float,
@@ -93,18 +90,20 @@ type OpMode = (Agent,Mode)
 --
 moveLat :: Float -> Servos -> Servos
 moveLat f srv
-  | f < 0     = srv { rightFront = (rightFront srv) +  f,
-                      rightRear = (rightRear srv) +  f }
-  | f > 0     = srv { leftFront = (leftFront srv) + f,
-                      leftRear = (leftRear srv) + f }
+  | f /= 0    = srv { leftFront = (leftFront srv) + f,
+                      rightFront = (rightFront srv) + f,
+                      leftRear = (leftRear srv) + f,
+                      rightRear = (rightRear srv) +  f
+                    }
   | otherwise = srv
 
 moveLong :: Float -> Servos -> Servos
 moveLong f srv
-  | f < 0     = srv { leftRear = (leftRear srv) + f,
-                      rightRear = (rightRear srv) + f }
-  | f > 0     = srv { leftFront = (leftFront srv) + f,
-                      rightFront = (rightFront srv) + f }
+  | f /= 0    = srv { leftFront = (leftFront srv) + f,
+                      rightFront = (rightFront srv) + f,
+                      leftRear = (leftRear srv) + f,
+                      rightRear = (rightRear srv) + f
+                    }
   | otherwise = srv
 
 moveVert :: Float -> Servos -> Servos
@@ -117,10 +116,11 @@ moveVert f srv
 
 moveSpin :: Float -> Servos -> Servos
 moveSpin f srv
-  | f < 0     = srv { rightFront = (rightFront srv) + f,
-                      leftRear = (leftRear srv) + f }
-  | f > 0     = srv { leftFront = (leftFront srv) + f,
-                      rightRear = (rightRear srv) + f }
+  | f /= 0    = srv { leftFront = (leftFront srv) + f,
+                      rightFront = (rightFront srv) + f,
+                      leftRear = (leftRear srv) + f,
+                      rightRear = (rightRear srv) + f
+                    }
   | otherwise = srv
 
 
@@ -165,6 +165,9 @@ type Status = (Servos,Display,OpMode)
 fullPower :: Float
 fullPower = 1.0
 
+threeQtrPower :: Float
+threeQtrPower = 0.75
+
 halfPower :: Float
 halfPower = 0.5
 
@@ -179,9 +182,9 @@ down f = signalDefault { gaz = (negate f) }
 left f = signalDefault { roll = (negate f) }
 right f = signalDefault { roll = f }
 forward f = signalDefault { pitch = (negate f) }
-reverse f = signalDefault { pitch = f }
-spinL f = signalDefault { yaw = f }
-spinR f = signalDefault { yaw = (negate f) }
+backward f = signalDefault { pitch = f }
+spinL f = signalDefault { flag = (Bits (Bit0 False) (Bit1 False)), yaw = (negate f) }
+spinR f = signalDefault { flag = (Bits (Bit0 False) (Bit1 False)), yaw = f }
 
 
 -- | default values

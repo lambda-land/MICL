@@ -36,13 +36,14 @@ module MICL where
 --           * a negative value will make the drone spin (turn) left
 --           * a positive value will make the drone spin (turn) right
 --
-data Signal = Signal { channel :: Agent,
-                       mode :: Mode,
-                       enable :: Bool,
-                       roll :: Float,
-                       pitch :: Float,
-                       gaz :: Float,
-                       yaw :: Float }
+data Signal = Signal { channel :: Agent
+                     , mode :: Mode
+                     , enable :: Bool
+                     , roll :: Float
+                     , pitch :: Float
+                     , gaz :: Float
+                     , yaw :: Float
+                     }
             deriving(Show)
 
 data Agent = Human
@@ -55,84 +56,16 @@ data Mode = Recovery
           | Wait
           deriving(Show)
 
-data Servos = Servos { leftFront :: Float,
-                       rightFront :: Float,
-                       leftRear :: Float,
-                       rightRear :: Float }
-            deriving(Show)
-
-type Display = [String]
-
 type OpMode = (Agent,Mode)
 
 
--- | a location can either be obtained as a relative location based on the starting
---       point of the drone, or from an internal or attached GPS unit.
+-- | location is calculated as a relative location using dead-reckoning.
 --
-data Location = Location { relativeLocation :: (North,East,Down),
-                           absoluteLocation :: (Latitude,Longitude,Elevation)
+data Location = Location { north :: Float
+                         , east :: Float
+                         , down :: Float
                          }
-              deriving(Show)
-
-type North = Float
-type East = Float
-type Down = Float
-type Latitude = Float
-type Longitude = Float
-type Elevation = Float
-
-type Speed = Float
-
-
--- | movement functions
---   take a signal and servos apply the appropriate servo changes (the range of input
---       from the signal is -1.0 to 1.0).
---   moveLat: moves the drone latitudinally (dips the left or right side of the
---       drone).
---   moveLong: moves the drone longitudinally (dips the front or rear side of
---       the drone).
---   moveVert: moves the drone vertically (increases or decreases speed to all
---       of the servos).
---   moveSpin: spins the drone in place either left or right.
---
-moveLat :: Float -> Servos -> Servos
-moveLat f srv
-  | f <  0    = srv { rightFront = f,
-                      rightRear  = f
-                    }
-  | f > 0     = srv { leftFront = f,
-                      leftRear  = f
-                    }
-  | otherwise = srv
-
-moveLong :: Float -> Servos -> Servos
-moveLong f srv
-  | f < 0     = srv { leftRear  = f,
-                      rightRear = f
-                    }
-  | f > 0     = srv { leftFront  = f,
-                      rightFront = f
-                    }
-  | otherwise = srv
-
-moveVert :: Float -> Servos -> Servos
-moveVert f srv
-  | f /= 0    = srv { leftFront  = f,
-                      rightFront = f,
-                      leftRear   = f,
-                      rightRear  = f
-                    }
-  | otherwise = srv
-
-moveSpin :: Float -> Servos -> Servos
-moveSpin f srv
-  | f < 0     = srv { leftFront = (negate f),
-                      rightRear = (negate f)
-                    }
-  | f > 0     = srv { rightFront = f,
-                      leftRear   = f
-                    }
-  | otherwise = srv
+              deriving(Eq,Show)
 
 
 -- | location functions
@@ -147,56 +80,73 @@ moveSpin f srv
 --
 --   TODO: need to deal with orientation issues!
 --
-locateNorth :: Float -> Speed -> Location -> Location
-locateNorth f spd loc = let (n,e,d) = (relativeLocation loc) in
-  loc { relativeLocation = (n + (spd * f),e,d) }
+locateNorth :: Float -> Location -> Location
+locateNorth f loc = loc { north = (north loc) + f }
 
-locateEast :: Float -> Speed -> Location -> Location
-locateEast f spd loc = let (n,e,d) = (relativeLocation loc) in
-  loc { relativeLocation = (n,e + (spd * f),d) }
+locateEast :: Float -> Location -> Location
+locateEast f loc = loc { east = (east loc) + f }
 
-locateDown :: Float -> Speed -> Location -> Location
-locateDown f spd loc = let (n,e,d) = (relativeLocation loc) in
-  loc { relativeLocation = (n,e,d + (spd * f)) }
+locateDown :: Float -> Location -> Location
+locateDown f loc = loc { down = (down loc) + f }
 
 
 -- | combinator functions
---   move: takes a signal and servos and updates the servos
---   display: takes a signal and a display and updates the display
---   updateAgent: takes a signal and switches the agent of the drone based on
---       the channel
---   updateMode: takes a status and updates it based on the current mode of the
---       drone
+--   relocate: takes a signal and a location, and calculates the drone's new location
+--       based on the max speed and the signal input.
+--   changeAgent: takes a signal and switches the agent of the drone based on
+--       the channel.
+--   changeMode: takes a signal and switches the mode of the drone based on the current
+--       mode.
+--   addTask: takes a task and adds it to the current list of tasks.
+--   deleteTask: removes a task from the current list of tasks if it exists.
+--   clearWaypoint: clears a waypoint from the list of tasks if it exists.
 --
-movement :: Signal -> Servos
-movement sig = (moveLat (roll sig)
-                (moveLong (pitch sig)
-                 (moveVert (gaz sig)
-                  (moveSpin (yaw sig) servosDefault))))
+locate :: Signal -> Location -> Location
+locate sig loc = (locateNorth ((pitch sig) * maxRate)
+                  (locateEast ((roll sig) * maxRate)
+                   (locateDown ((gaz sig) * maxRate) loc)))
 
-display :: Signal -> Display -> Display
-display sig []  = error "no task to display"
-display sig dis = dis
-
-switchAgent :: Signal -> Agent
-switchAgent sig = case (channel sig) of
+changeAgent :: Signal -> Agent
+changeAgent sig = case (channel sig) of
   Computer -> Human
   Human    -> Computer
 
-switchMode :: Signal -> Mode
-switchMode sig = case (mode sig) of
-  Return -> Wait
-  _      -> Normal
+changeMode :: Signal -> Mode
+changeMode sig = case (mode sig) of
+  Recovery -> Normal
+  Normal   -> Wait
+  Return   -> Wait
+  Wait     -> Normal
 
-switchEnable :: Signal -> Signal
-switchEnable sig = case (enable sig) of
+changeEnable :: Signal -> Signal
+changeEnable sig = case (enable sig) of
   True -> sig { enable = False }
   _    -> sig { enable = True }
 
-relocate :: Signal -> Location -> Location
-relocate sig loc = (locateNorth (pitch sig) speed
-                    (locateEast (roll sig) speed
-                     (locateDown (gaz sig) speed loc)))
+addTask :: Task -> Display -> Display
+addTask (Left  wpt) dis = dis ++ [Left wpt]
+addTask (Right ins) dis = dis ++ [Right ins]
+
+deleteTask :: Task -> Display -> Display
+deleteTask _                []     = []
+deleteTask (Left (str,loc)) (d:ds) = case d of
+  (Left (str',loc'))
+    | loc       == loc' -> ds
+    | otherwise         -> d : deleteTask (Left (str,loc)) ds
+  _ -> d : deleteTask (Left (str,loc)) ds
+deleteTask (Right str)      (d:ds) = case d of
+  (Right str')
+    | str       == str' -> ds
+    | otherwise         -> d : deleteTask (Right str) ds
+  _ -> d : deleteTask (Right str) ds
+
+clearWaypoint :: Location -> Display -> Display
+clearWaypoint _   []     = []
+clearWaypoint loc (d:ds) = case d of
+  (Left (str,loc'))
+    | loc       == loc' -> ds
+    | otherwise         -> d : clearWaypoint loc ds
+  _ -> d : clearWaypoint loc ds
 
 
 -- | semantic domain
@@ -205,35 +155,33 @@ type Domain = Signal -> Status -> Status
 
 type Status = (Location,Display,OpMode)
 
+type Display = [Task]
+type Task = Either Waypoint Instruction
+type Waypoint = (String,Location)
+type Instruction = String
+
 
 -- | default values
 --
-signalDefault = Signal { channel = Computer,
-                         mode    = Normal,
-                         enable  = True,
-                         roll    = zeroPower,
-                         pitch   = zeroPower,
-                         gaz     = zeroPower,
-                         yaw     = zeroPower
-                       }
-
-servosDefault = Servos { leftFront  = zeroPower,
-                         rightFront = zeroPower,
-                         leftRear   = zeroPower,
-                         rightRear  = zeroPower
+signalDefault = Signal { channel = Computer
+                       , mode    = Normal
+                       , enable  = True
+                       , roll    = zeroPower
+                       , pitch   = zeroPower
+                       , gaz     = zeroPower
+                       , yaw     = zeroPower
                        }
 
 displayDefault = []
 
 opModeDefault = (Computer,Normal)
 
-homeLocation = Location { relativeLocation = (0,0,0),
-                          absoluteLocation = (0,0,0)
+homeLocation = Location { north = 0.0
+                        , east = 0.0
+                        , down = 0.0
                         }
 
 statusDefault = (homeLocation,displayDefault,opModeDefault)
-
-speed = 15
 
 
 -- | smart constructors
@@ -253,11 +201,19 @@ quarterPower = 0.25
 zeroPower :: Float
 zeroPower = 0.0
 
-up f = signalDefault { gaz = f }
-down f = signalDefault { gaz = (negate f) }
+ascend f = signalDefault { gaz = f }
+descend f = signalDefault { gaz = (negate f) }
 left f = signalDefault { roll = (negate f) }
 right f = signalDefault { roll = f }
 forward f = signalDefault { pitch = (negate f) }
 backward f = signalDefault { pitch = f }
-spinL f = signalDefault { enable = False, yaw = (negate f) }
-spinR f = signalDefault { enable = False, yaw = f }
+spinL f = signalDefault { enable = False
+                        , yaw = (negate f)
+                        }
+spinR f = signalDefault { enable = False
+                        , yaw = f
+                        }
+
+maxRate = 15.0
+
+waypoint = "Waypoint"

@@ -8,12 +8,19 @@ import Control.Monad.State
 
 
 -- | example programs
---
-prog1 = do move (up fullPower)
+--   rmx in let statement is the maximum rate achievable by the vehicle
+--       or device in meters/second.
+prog1 = do move (ascend fullPower)
+           move (left fullPower)
+           newTask (Left (waypoint,Location { north = 0.0
+                                            , east = 0.0
+                                            , down = 0.0
+                                            } ))
            move (forward fullPower)
            move (right fullPower)
-           move (spinL halfPower)
-           move (spinR halfPower)
-           move (left fullPower)
            move (backward fullPower)
-           move (down fullPower)
+           move (descend fullPower)
+           newTask (Left (waypoint,Location { north = 150.0
+                                            , east = -25.0
+                                            , down = 75.0
+                                            } ))

@@ -22,10 +22,6 @@ newTask :: Task -> State Status ()
 newTask tsk = do (loc,dis,opm) <- get
                  put (loc,addTask tsk dis,opm)
 
-emptyTask :: State Status ()
-emptyTask = do (loc,dis,opm) <- get
-               put (loc,[],opm)
-
 updateAgent :: Program
 updateAgent sig = do (loc,dis,opm) <- get
                      put (loc,dis,(changeAgent sig,snd opm))

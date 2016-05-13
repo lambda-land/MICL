@@ -10,97 +10,112 @@
 
 module Interactive where
 
-import Control.Monad (when)
-import Data.Maybe (isJust, fromJust)
-import Data.List (nub)
+import Graphics.UI.WX hiding (Event)
+import Graphics.UI.WXCore as WXCore
+import Reactive.Banana
+import Reactive.Banana.WX
 import System.Random
-import System.IO
-import Debug.Trace
-import Data.IORef
 
-import Reactive.Banana as R
-import Reactive.Banana.Frameworks as R
 
-import MICL
-import MonadicMICL
+-- | main
+--
+height, width, depth :: Int
+height = 300
+width  = 300
+depth  = 300
+
+ship :: Bitmap ()
+ship = bitmap "ship.ico"
 
 main :: IO ()
-main = do
-  displaySplashScreen
-  sources <- makeSources
-  network <- compile $ networkDescription sources
+main = start flightsim
+
+
+-- | flight logic
+--
+flightsim :: IO ()
+flightsim = do
+  ff <- frame [ text       := "Flight Sim"
+              , bgcolor    := white
+              , resizeable := False ]
+
+  status <- statusField [ text := "Welcome to MICLs Flight Simulator" ]
+  set ff [ statusBar := [status] ]
+
+  t <- timer ff [ interval := 50 ]
+
+  flight <- menuPane        [ text := "&Flight" ]
+  new    <- menuItem flight [ text := "&New\tCtrl+N", help := "New flight" ]
+  pause  <- menuItem flight [ text      := "&Pause\tCtrl+P"
+                            , help      := "Pause flight"
+                            , checkable := True
+                            ]
+  menuLine flight
+  quit <- menuQuit flight [ help := "Quit the flight" ]
+
+  set new   [ on command := flightsim ]
+  set pause [ on command := set t [ enabled :~ not ] ]
+  set quit  [ on command := close ff ]
+
+  set ff [ menuBar := [ flight ] ]
+
+  pp <- panel ff []
+  set ff [ layout := minsize (sz width height) $ widget pp ]
+  set pp [ on (charKey '-') := set t [ interval :~ \i -> i * 2 ]
+         , on (charKey '+') := set t [ interval :~ \i -> max 10 (div i 2) ]
+         ]
+
+  -- event network
+  let networkDescription :: MomentIO ()
+      networkDescription = mdo
+        -- timer
+        etick <- event0 t command
+
+        -- keyboard events
+        ekey <- event1 pp keyboard
+        let eup  = filterE ((== KeyUp      ) . keyKey) ekey
+            edwn = filterE ((== KeyDown    ) . keyKey) ekey
+            efwd = filterE ((== charKey 'w') . keyKey) ekey
+            ebwd = filterE ((== charKey 's') . keyKey) ekey
+            elft = filterE ((== charKey 'a') . keyKey) ekey
+            ergt = filterE ((== charKey 'd') . keyKey) ekey
+
+        -- ship position
+        (bship :: Behavior Int)
+          <- accumB (width `div` 2) $ unions
+          [ goLeft  <$ elft
+          , goRight <$ ergt
+          , goFwd   <$ efwd
+          , goBack  <$ ebwd
+          , goUp    <$ eup
+          , goDown  <$ edwn
+          ]
+
+        let
+          goLeft  x = max 0            (x - 5)
+          goRight x = min (width - 30) (x + 5)
+          goFwd   y = min (width - 30) (y + 5)
+          goBack  y = max 0            (y - 5)
+          goUp    z = min (width - 30) (z + 5)
+          goDown  z = max 0            (z - 5)
+
+        -- draw the flight state
+        bpaint <- stepper (\_dc_ -> return ()) $
+          (drawFlightState <$> bship) <@ etick
+        sink pp [ on paint :== bpaint ]
+        reactimate $ repaint pp <$ etick
+
+  network <- compile networkDescription
   actuate network
-  interactive sources
-
--- Create event sources corresponding to  ascend  and  descend
-makeSources = (,) <$> newAddHandler <*> newAddHandler
-
-displaySplashScreen :: IO ()
-displaySplashScreen = mapM_ putStrLn $
-  "------ Interactive Mode ------":
-  "":
-  "Commands are:":
-  "   ascend  - increase height":
-  "   descend - decrease height":
-  "   exit    - leave the program":
-  "":
-  []
 
 
--- | interactive
---
-interactive :: (EventSource (), EventSource ()) -> IO ()
-interactive (ascend,descend) = loop
-  where
-    loop = do
-      putStr "> "
-      hFlush stdout
-      s <- getLine
-      case s of
-        "ascend"  -> fire ascend ()
-        "descend" -> fire descend ()
-        "exit"    -> return ()
-        _         -> putStrLn $ s ++ " -- unknown command"
-      when (s /= "exit") loop
-
--- | event sources
---
-type EventSource a = (AddHandler a, a -> IO ())
-
-addHandler :: EventSource a -> AddHandler a
-addHandler = fst
-
-fire :: EventSource a -> a -> IO ()
-fire = snd
-
-
--- | program logic
---
-type Elevation = Float
-
-networkDescription :: (EventSource (), EventSource ()) -> MomentIO ()
-networkDescription (ascend,descend) = mdo
-  initialStdGen <- liftIO $ newStdGen
-  eascend  <- fromAddHandler (addHandler ascend)
-  edescend <- fromAddHandler (addHandler descend)
-  (eheight :: Event Elevation, bheight :: Behavior Elevation) <- mapAccum 0 . fmap (\f x -> (f x,f x)) $ unions $
-    [ addHeight    <$ eascend
-    , removeHeight <$ edescend
-    ]
+-- draw flight state
+drawFlightState :: Int -> DC a -> b -> IO ()
+drawFlightState ship dc _view = do
   let
-    addHeight    = (+1)
-    removeHeight = subtract 1
+    shipLocation = point ship (width `div` 2)
 
-    emaydescend :: Event Bool
-    emaydescend = (\height _ -> height > 0) <$> bheight <@> edescend
+  drawShip dc shipLocation
 
-    edoesdescend :: Event ()
-    edoesdescend = () <$ filterE id emaydescend
-
-    edenied :: Event ()
-    edenied = () <$ filterE not emaydescend
-
-  reactimate $ putStrLn . showHeight <$> eheight
-  reactimate $ putStrLn "Not enough height!" <$ edenied
-
-showHeight elevation = "Height: " ++ show elevation
+drawShip :: DC a -> Point -> IO ()
+drawShip dc pos = drawBitmap dc ship pos True []

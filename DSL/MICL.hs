@@ -61,11 +61,11 @@ type OpMode = (Agent,Mode)
 
 -- | location is calculated as a relative location using dead-reckoning.
 --
-data Location = Location { north :: Float
-                         , east :: Float
-                         , down :: Float
-                         }
-              deriving(Eq,Show)
+type Location = (North,East,Down)
+
+type North = Float
+type East = Float
+type Down = Float
 
 
 -- | location functions
@@ -81,13 +81,13 @@ data Location = Location { north :: Float
 --   TODO: need to deal with orientation issues!
 --
 locateNorth :: Float -> Location -> Location
-locateNorth f loc = loc { north = (north loc) + f }
+locateNorth f (n,e,d) = (n + f,e,d)
 
 locateEast :: Float -> Location -> Location
-locateEast f loc = loc { east = (east loc) + f }
+locateEast f (n,e,d) = (n,e + f,d)
 
 locateDown :: Float -> Location -> Location
-locateDown f loc = loc { down = (down loc) + f }
+locateDown f (n,e,d) = (n,e,d + f)
 
 
 -- | combinator functions
@@ -155,6 +155,9 @@ type Domain = Signal -> Status -> Status
 
 type Status = (Location,Display,OpMode)
 
+
+-- | display type synonyms
+--
 type Display = [Task]
 type Task = Either Waypoint Instruction
 type Waypoint = (String,Location)
@@ -176,10 +179,7 @@ displayDefault = []
 
 opModeDefault = (Computer,Normal)
 
-homeLocation = Location { north = 0.0
-                        , east = 0.0
-                        , down = 0.0
-                        }
+homeLocation = (north 0.0,east 0.0,down 0.0)
 
 statusDefault = (homeLocation,displayDefault,opModeDefault)
 
@@ -201,12 +201,21 @@ quarterPower = 0.25
 zeroPower :: Float
 zeroPower = 0.0
 
+north :: Float -> Float
+north f = f
+
+east :: Float -> Float
+east f = f
+
+down :: Float -> Float
+down f = f
+
 ascend f = signalDefault { gaz = f }
 descend f = signalDefault { gaz = (negate f) }
 left f = signalDefault { roll = (negate f) }
 right f = signalDefault { roll = f }
-forward f = signalDefault { pitch = (negate f) }
-backward f = signalDefault { pitch = f }
+forward f = signalDefault { pitch = f }
+backward f = signalDefault { pitch = (negate f) }
 spinL f = signalDefault { enable = False
                         , yaw = (negate f)
                         }

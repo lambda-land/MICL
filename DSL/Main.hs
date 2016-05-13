@@ -1,7 +1,11 @@
 module Main where
 
 import Control.Monad.Trans (liftIO)
+import Control.Exception (catch)
+import qualified Control.Exception as E
 import Data.List (isPrefixOf)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Maybe (fromJust)
 import System.Console.ANSI (Color(..)
                            , ColorIntensity(..)
@@ -66,7 +70,66 @@ dispatch (cmd:args) = case lookupCmd cmd of
         Just (_,f,_,_) -> f args
 
 cmds :: [CmdInfo]
-cmds = undefined
+cmds =
+  [("add",    cmdAdd,    "<description>",     "adds a task")
+  ,("change", cmdChange, "<id><description>", "changes a task")
+  ,("rm",     cmdRm,     "<id>",              "removes a task")
+  ,("done",   cmdDone,   "<id>",              "marks a task as done")
+  ,("undone", cmdUndone, "<id>",              "resets the done state for a task")
+  ,("list",   cmdList,   "[tag | -tag ...]",  "list all tasks with optional filtering")
+  ,("help",   cmdHelp,   "",                  "help information")
+  ]
+
+cmdAdd :: CmdHandler
+cmdAdd []   = printUsage "add"
+cmdAdd desc = modifyDB (add $ unwords desc)
+
+cmdChange :: CmdHandler
+cmdChange (idStr:desc)
+  | not (null desc) = modifyDB (changeTask (read idStr) (const $ unwords desc))
+cmdChange _         = printUsage "change"
+
+cmdRm :: CmdHandler
+cmdRm (idStr:[]) = modifyDB (delete $ read idStr)
+cmdRm _          = printUsage "rm"
+
+cmdDone :: CmdHandler
+cmdDone (idStr:[]) = modifyDB (adjustTask (read idStr) (addTag $ "@done{" ++ date ++ "}"))
+cmdDone _          = printUsage "done"
+
+cmdUndone :: CmdHandler
+cmdUndone (idStr:[]) = modifyDB (adjustTask (read idStr) (deleteTag "@done"))
+cmdUndone _          = printUsage "undone"
+
+cmdList :: CmdHandler
+cmdList tags = withDB (list tagFilter) >>= putStr
+    where
+        defaultFilter = ["-@done"]
+        tagFilter = foldl' updateFilter (Set.empty, Set.empty) (defaultFilter ++ tags)
+        updateFilter (sel, desel) ('-':tag) = (Set.delete tag sel, Set.insert tag desel)
+        updateFilter (sel, desel) ('+':tag) = (sel, Set.delete tag desel)
+        updateFilter (sel, desel) tag       = (Set.insert tag sel, Set.delete tag desel)
+
+cmdHelp :: CmdHandler
+cmdHelp _ = do
+        putStrLn "Task Commands:"
+        putStr . unlines . map printCmdInfo $ cmds
+
+
+
+-- | monadic operations
+--
+withDB :: (TodoDB -> a) -> IO a
+withDB f = fmap f load
+
+modifyDB :: (TaskDB -> TaskDB) -> IO ()
+modifyDB f = catch doModify handleError
+    where
+      doModify = do
+        db' <- withDB f
+        db' `seq` save db'
+      handleError :: E.SomeException -> IO ()
+      handleError e = print e >> return ()
 
 
 -- | auto complete

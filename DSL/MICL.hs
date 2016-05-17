@@ -59,6 +59,16 @@ data Mode = Recovery
 type OpMode = (Agent,Mode)
 
 
+-- | device
+--
+data Device = Device { gps :: Bool
+                     , rate :: Speed
+                     }
+            deriving(Show)
+
+type Speed = Float
+
+
 -- | location is calculated as a relative location using dead-reckoning.
 --
 type Location = (North,East,Down)
@@ -90,8 +100,8 @@ locateDown :: Float -> Location -> Location
 locateDown f (n,e,d) = (n,e,d + f)
 
 
--- | combinator functions
---   relocate: takes a signal and a location, and calculates the drone's new location
+-- | functions
+--   locate: takes a signal and a location, and calculates the drone's new location
 --       based on the max speed and the signal input.
 --   changeAgent: takes a signal and switches the agent of the drone based on
 --       the channel.
@@ -101,10 +111,10 @@ locateDown f (n,e,d) = (n,e,d + f)
 --   deleteTask: removes a task from the current list of tasks if it exists.
 --   clearWaypoint: clears a waypoint from the list of tasks if it exists.
 --
-locate :: Signal -> Location -> Location
-locate sig loc = (locateNorth ((pitch sig) * maxRate)
-                  (locateEast ((roll sig) * maxRate)
-                   (locateDown ((gaz sig) * maxRate) loc)))
+locate :: Device -> Signal -> Location -> Location
+locate dev sig loc = (locateNorth ((pitch sig) * (rate dev))
+                      (locateEast ((roll sig) * (rate dev))
+                       (locateDown ((gaz sig) * (rate dev)) loc)))
 
 changeAgent :: Signal -> Agent
 changeAgent sig = case (channel sig) of
@@ -128,12 +138,12 @@ addTask (Left  wpt) dis = dis ++ [Left wpt]
 addTask (Right ins) dis = dis ++ [Right ins]
 
 deleteTask :: Task -> Display -> Display
-deleteTask _                []     = []
-deleteTask (Left (str,loc)) (d:ds) = case d of
-  (Left (str',loc'))
+deleteTask _          []     = []
+deleteTask (Left loc) (d:ds) = case d of
+  (Left loc')
     | loc       == loc' -> ds
-    | otherwise         -> d : deleteTask (Left (str,loc)) ds
-  _ -> d : deleteTask (Left (str,loc)) ds
+    | otherwise         -> d : deleteTask (Left loc) ds
+  _ -> d : deleteTask (Left loc) ds
 deleteTask (Right str)      (d:ds) = case d of
   (Right str')
     | str       == str' -> ds
@@ -143,7 +153,7 @@ deleteTask (Right str)      (d:ds) = case d of
 clearWaypoint :: Location -> Display -> Display
 clearWaypoint _   []     = []
 clearWaypoint loc (d:ds) = case d of
-  (Left (str,loc'))
+  (Left loc')
     | loc       == loc' -> ds
     | otherwise         -> d : clearWaypoint loc ds
   _ -> d : clearWaypoint loc ds
@@ -160,15 +170,15 @@ type Status = (Location,Display,OpMode)
 --
 type Display = [Task]
 type Task = Either Waypoint Instruction
-type Waypoint = (String,Location)
+type Waypoint = Location
 type Instruction = String
 
 
 -- | default values
 --
-signalDefault = Signal { channel = Computer
-                       , mode    = Normal
-                       , enable  = True
+signalDefault = Signal { channel = (fst opModeDefault)
+                       , mode    = (snd opModeDefault)
+                       , enable  = enabled
                        , roll    = zeroPower
                        , pitch   = zeroPower
                        , gaz     = zeroPower
@@ -186,6 +196,31 @@ statusDefault = (homeLocation,displayDefault,opModeDefault)
 
 -- | smart constructors
 --
+ascend f = signalDefault { gaz = f }
+descend f = signalDefault { gaz = (negate f) }
+strafeL f = signalDefault { roll = (negate f) }
+strafeR f = signalDefault { roll = f }
+forward f = signalDefault { pitch = f }
+backward f = signalDefault { pitch = (negate f) }
+spinL f = signalDefault { enable = disabled
+                       , yaw = (negate f)
+                       }
+spinR f = signalDefault { enable = disabled
+                       , yaw = f
+                       }
+
+north :: Float -> Float
+north f = f
+
+east :: Float -> Float
+east f = f
+
+down :: Float -> Float
+down f = f
+
+
+-- | constructed values
+--
 fullPower :: Float
 fullPower = 1.0
 
@@ -201,28 +236,5 @@ quarterPower = 0.25
 zeroPower :: Float
 zeroPower = 0.0
 
-north :: Float -> Float
-north f = f
-
-east :: Float -> Float
-east f = f
-
-down :: Float -> Float
-down f = f
-
-ascend f = signalDefault { gaz = f }
-descend f = signalDefault { gaz = (negate f) }
-left f = signalDefault { roll = (negate f) }
-right f = signalDefault { roll = f }
-forward f = signalDefault { pitch = f }
-backward f = signalDefault { pitch = (negate f) }
-spinL f = signalDefault { enable = False
-                        , yaw = (negate f)
-                        }
-spinR f = signalDefault { enable = False
-                        , yaw = f
-                        }
-
-maxRate = 15.0
-
-waypoint = "Waypoint"
+enabled = True
+disabled = False

@@ -1,8 +1,10 @@
 module MonadicMICL where
 
-import Control.Event.Handler
 import Control.Monad
 import Control.Monad.State
+
+import Reactive.Banana
+import Reactive.Banana.Combinators
 
 import MICL
 
@@ -12,15 +14,19 @@ import MICL
 --   switchAgent: takes a signal, and updates the state status.
 --   switchMode: takes a signal, and updates the state status.
 --
-move :: Program
-move sig = do (loc,dis,opm) <- get
-              put (locate sig loc,dis,opm)
-              (loc,dis,opm) <- get
-              put (loc,clearWaypoint loc dis,opm)
+move :: Device -> Program
+move dev sig = do (loc,dis,opm) <- get
+                  put (locate dev sig loc,dis,opm)
+                  (loc,dis,opm) <- get
+                  put (loc,clearWaypoint loc dis,opm)
 
 newTask :: Task -> State Status ()
 newTask tsk = do (loc,dis,opm) <- get
                  put (loc,addTask tsk dis,opm)
+
+removeTask :: Task -> State Status ()
+removeTask tsk = do (loc,dis,opm) <- get
+                    put (loc,deleteTask tsk dis,opm)
 
 updateAgent :: Program
 updateAgent sig = do (loc,dis,opm) <- get

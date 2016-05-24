@@ -153,28 +153,28 @@ clearWaypoint loc (d:ds) = case d of
 --
 type Domain = Signal -> Status Condition -> Status Condition
 
-data Status a = S a Timestamp [Status a]
+data Status a = Status a Timestamp
               deriving(Show)
 
 type Condition = (Location,Display,OpMode)
 type Timestamp = Int
 
 instance Functor Status where
-  fmap f (S c t []) = S (f c) t []
-  fmap f (S c t ss) = S (f c) t (map (fmap f) ss)
+  fmap f (Status c t) = Status (f c) t
 
 instance Applicative Status where
-  pure c                      = S c 0 []
-  (S f t []) <*> (S c t' [])  = S (f c) (t + t') []
-  (S f t ss) <*> (S c t' ss') = S (f c) (t + t') [q <*> p | q <- ss, p <- ss']
+  pure c                          = Status c 0
+  (Status f t) <*> (Status c t')  = Status (f c) (t + t')
 
 timestamp :: Status a -> Timestamp
-timestamp (S c t []) = t
-timestamp (S c t ss) = sum (map timestamp ss)
+timestamp (Status c t) = t
 
 addTime :: Timestamp -> Status a -> Status a
-addTime t (S c t' []) = S c (t + t') []
-addTime t (S c t' ss) = S c (t + t') (map (addTime t) ss)
+addTime t (Status c t') = Status c (t + t')
+
+instance Monad Status where
+  return             = pure
+  (Status c t) >>= f = addTime t (f c)
 
 
 -- | display type synonyms
@@ -202,7 +202,9 @@ opModeDefault = (Computer,Normal)
 
 homeLocation = (north 0.0,east 0.0,down 0.0)
 
-statusDefault = (homeLocation,displayDefault,opModeDefault)
+timeDefault = 0
+
+statusDefault = (Status (homeLocation,displayDefault,opModeDefault) timeDefault)
 
 
 -- | smart constructors
@@ -252,3 +254,6 @@ disabled = False
 
 rate :: Float
 rate = 2.0
+
+tick :: Timestamp
+tick = 1

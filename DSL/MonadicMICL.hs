@@ -1,11 +1,7 @@
 module MonadicMICL where
 
 import Control.Monad
-import Control.Monad.Loops
 import Control.Monad.State
-
-import Reactive.Banana
-import Reactive.Banana.Combinators
 
 import MICL
 
@@ -16,42 +12,32 @@ import MICL
 --   switchMode: takes a signal, and updates the state status.
 --
 move :: Program
-move sig = do (loc,dis,opm) <- get
-              put (locate sig loc,dis,opm)
-              (loc,dis,opm) <- get
-              put (loc,clearWaypoint loc dis,opm)
+move sig time = do (Status (loc,dis,opm) t) <- get
+                   put (Status (locate sig loc,dis,opm) t) -- how do I manage time now?
 
-newTask :: Task -> State Status ()
-newTask tsk = do (loc,dis,opm) <- get
-                 put (loc,addTask tsk dis,opm)
+-- move :: Program
+-- move sig = do (loc,dis,opm) <- get
+--               put (locate sig loc,dis,opm)
+--               (loc,dis,opm) <- get
+--               put (loc,clearWaypoint loc dis,opm)
 
-removeTask :: Task -> State Status ()
-removeTask tsk = do (loc,dis,opm) <- get
-                    put (loc,deleteTask tsk dis,opm)
+-- newTask :: Task -> State Status ()
+-- newTask tsk = do (loc,dis,opm) <- get
+--                  put (loc,addTask tsk dis,opm)
 
-updateAgent :: Program
-updateAgent sig = do (loc,dis,opm) <- get
-                     put (loc,dis,(changeAgent sig,snd opm))
+-- removeTask :: Task -> State Status ()
+-- removeTask tsk = do (loc,dis,opm) <- get
+--                     put (loc,deleteTask tsk dis,opm)
 
-updateMode :: Program
-updateMode sig = do (loc,dis,opm) <- get
-                    put (loc,dis,(fst opm,changeMode sig))
+-- updateAgent :: Program
+-- updateAgent sig = do (loc,dis,opm) <- get
+--                      put (loc,dis,(changeAgent sig,snd opm))
 
-to :: Signal -> Float -> State Status ()
-to = undefined
-
-while :: Program -> Program -> Program
-while = undefined
-
-
--- | iterative operator for programs (or should this be iterative for
---       status?)
--- (:+:)
-
--- | blended operator for programs
--- (:&:)
+-- updateMode :: Program
+-- updateMode sig = do (loc,dis,opm) <- get
+--                     put (loc,dis,(fst opm,changeMode sig))
 
 
 -- | semantic domain for the state
 --
-type Program = Signal -> State Status ()
+type Program = Signal -> Timestamp -> State (Status Condition) ()

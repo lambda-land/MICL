@@ -151,11 +151,30 @@ clearWaypoint loc (d:ds) = case d of
 
 -- | semantic domain
 --
-type Domain = Signal -> Status -> Status Timestamp
+type Domain = Signal -> Status Condition -> Status Condition
 
-data Status a = Status a [(Location,Display,OpMode,Timestamp)]
+data Status a = S a Timestamp [Status a]
+              deriving(Show)
 
+type Condition = (Location,Display,OpMode)
 type Timestamp = Int
+
+instance Functor Status where
+  fmap f (S c t []) = S (f c) t []
+  fmap f (S c t ss) = S (f c) t (map (fmap f) ss)
+
+instance Applicative Status where
+  pure c                      = S c 0 []
+  (S f t []) <*> (S c t' [])  = S (f c) (t + t') []
+  (S f t ss) <*> (S c t' ss') = S (f c) (t + t') [q <*> p | q <- ss, p <- ss']
+
+timestamp :: Status a -> Timestamp
+timestamp (S c t []) = t
+timestamp (S c t ss) = sum (map timestamp ss)
+
+addTime :: Timestamp -> Status a -> Status a
+addTime t (S c t' []) = S c (t + t') []
+addTime t (S c t' ss) = S c (t + t') (map (addTime t) ss)
 
 
 -- | display type synonyms

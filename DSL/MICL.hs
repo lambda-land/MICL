@@ -59,16 +59,6 @@ data Mode = Recovery
 type OpMode = (Agent,Mode)
 
 
--- | device
---
-data Device = Device { gps :: Bool
-                     , rate :: Speed
-                     }
-            deriving(Show)
-
-type Speed = Float
-
-
 -- | location is calculated as a relative location using dead-reckoning.
 --
 type Location = (North,East,Down)
@@ -100,7 +90,7 @@ locateDown :: Float -> Location -> Location
 locateDown f (n,e,d) = (n,e,d + f)
 
 
--- | functions
+-- | operators and combinators
 --   locate: takes a signal and a location, and calculates the drone's new location
 --       based on the max speed and the signal input.
 --   changeAgent: takes a signal and switches the agent of the drone based on
@@ -111,10 +101,10 @@ locateDown f (n,e,d) = (n,e,d + f)
 --   deleteTask: removes a task from the current list of tasks if it exists.
 --   clearWaypoint: clears a waypoint from the list of tasks if it exists.
 --
-locate :: Device -> Signal -> Location -> Location
-locate dev sig loc = (locateNorth ((pitch sig) * (rate dev))
-                      (locateEast ((roll sig) * (rate dev))
-                       (locateDown ((gaz sig) * (rate dev)) loc)))
+locate :: Signal -> Location -> Location
+locate sig loc = (locateNorth ((pitch sig) * rate)
+                  (locateEast ((roll sig) * rate)
+                   (locateDown ((gaz sig) * rate) loc)))
 
 changeAgent :: Signal -> Agent
 changeAgent sig = case (channel sig) of
@@ -161,9 +151,11 @@ clearWaypoint loc (d:ds) = case d of
 
 -- | semantic domain
 --
-type Domain = Signal -> Status -> Status
+type Domain = Signal -> Status -> Status Timestamp
 
-type Status = (Location,Display,OpMode)
+data Status a = Status a [(Location,Display,OpMode,Timestamp)]
+
+type Timestamp = Int
 
 
 -- | display type synonyms
@@ -238,3 +230,6 @@ zeroPower = 0.0
 
 enabled = True
 disabled = False
+
+rate :: Float
+rate = 2.0

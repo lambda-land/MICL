@@ -1,6 +1,7 @@
 module MonadicMICL where
 
 import Control.Monad
+import Control.Monad.Loops
 import Control.Monad.State
 
 import Reactive.Banana
@@ -9,16 +10,16 @@ import Reactive.Banana.Combinators
 import MICL
 
 
--- | stateful combinator functions
+-- | stateful operators and combinators
 --   movement: takes a signal, and updates the state status.
 --   switchAgent: takes a signal, and updates the state status.
 --   switchMode: takes a signal, and updates the state status.
 --
-move :: Device -> Program
-move dev sig = do (loc,dis,opm) <- get
-                  put (locate dev sig loc,dis,opm)
-                  (loc,dis,opm) <- get
-                  put (loc,clearWaypoint loc dis,opm)
+move :: Program
+move sig = do (loc,dis,opm) <- get
+              put (locate sig loc,dis,opm)
+              (loc,dis,opm) <- get
+              put (loc,clearWaypoint loc dis,opm)
 
 newTask :: Task -> State Status ()
 newTask tsk = do (loc,dis,opm) <- get
@@ -35,6 +36,20 @@ updateAgent sig = do (loc,dis,opm) <- get
 updateMode :: Program
 updateMode sig = do (loc,dis,opm) <- get
                     put (loc,dis,(fst opm,changeMode sig))
+
+to :: Signal -> Float -> State Status ()
+to = undefined
+
+while :: Program -> Program -> Program
+while = undefined
+
+
+-- | iterative operator for programs (or should this be iterative for
+--       status?)
+-- (:+:)
+
+-- | blended operator for programs
+-- (:&:)
 
 
 -- | semantic domain for the state

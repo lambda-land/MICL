@@ -1,0 +1,41 @@
+\begin{thebibliography}{1}
+
+\bibitem{abbott2015prog}
+K.~Abbott, C.~Bogart, and E.~Walkingshaw.
+\newblock {Programs for People: What We Can Learn from Lab Protocols}.
+\newblock In {\em {IEEE Int.\ Symp.\ on Visual Languages and Human-Centric
+  Computing (VL/HCC)}}, pages 203 -- 211, 2015.
+
+\bibitem{boeing2016auto}
+{Boeing}.
+\newblock {Unmanned Little Bird H-6U}.
+\newblock \url{http://www.boeing.com/defense/unmanned-little-bird-h-6u}, 2016.
+\newblock [Online; accessed 01-June-2016].
+
+\bibitem{elliot2015ivory}
+T.~Elliot, L.~Pike, S.~Winwood, P.~Hickey, J.~Bielman, J.~Sharp, E.~Seidel, and
+  J.~Launchbury.
+\newblock {Guilt Free Ivory}.
+\newblock In {\em Haskell Symposium}, pages 189 -- 200, 2015.
+
+\bibitem{pike2010copilot}
+L.~Pike, A.~Goodloe, R.~Morisset, and S.~Niller.
+\newblock {Copilot: A Hard Real-Time Runtime Monitor}.
+\newblock In {\em {1st Int.\ Conference on Runtime Verification}}, LNCS.
+  Springer, 2010.
+
+\bibitem{wikipedia2016dr}
+Wikipedia.
+\newblock {Dead reckoning -- {W}ikipedia{,} The Free Encyclopedia}.
+\newblock \url{https://en.wikipedia.org/wiki/Dead_reckoning}, 2016.
+\newblock [Online; accessed 01-June-2016].
+
+\bibitem{wikipedia2016frp}
+Wikipedia.
+\newblock {Functional reactive programming -- {W}ikipedia{,} The Free
+  Encyclopedia}.
+\newblock \url{https://en.wikipedia.org/wiki/Functional_reactive_programming},
+  2016.
+\newblock [Online; accessed 01-June-2016].
+
+\end{thebibliography}

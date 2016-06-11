@@ -1,0 +1,663 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\let\labelindent\relax
+
+\usepackage[override]{cmtt}
+\usepackage{color}
+
+\usepackage{mathptmx,amssymb,amsmath}
+\usepackage{fullpage}
+\usepackage[inline]{enumitem}
+\usepackage{fancyvrb}
+\usepackage[draft]{hyperref}
+\usepackage{cite}
+
+\usepackage{lambda}
+\renewcommand{\progfontsize}{\normalsize}
+
+\usepackage{textgreek}
+\usepackage{fixltx2e}
+
+
+%%%
+%%% Formatting details
+%%%
+\sloppy
+\sloppypar
+\widowpenalty=0
+\clubpenalty=0
+\displaywidowpenalty=0
+\raggedbottom
+\pagestyle{plain}
+
+% \topskip0pt
+% \parskip0pt
+% \partopsep0pt
+
+\DefineVerbatimEnvironment{program}{Verbatim}
+  {baselinestretch=1.0,xleftmargin=5mm,fontsize=\small,samepage=true}
+
+\def\denseitems{
+    \itemsep1pt plus1pt minus1pt
+    \parsep0pt plus0pt
+    \parskip0pt\topsep0pt}
+
+
+%%%
+%%% A few macros
+%%%
+\newcommand{\RevisionNeeded}{\bigskip\noindent\fbox{
+\textbf{Be prepared to revise this section \emph{many} times!}}}
+
+% \newcommand{\prog}[1]{{\small\texttt{#1}}}
+% \newcommand{\bs}{\texttt{\symbol{92}}}
+
+
+
+\begin{document}
+
+\title{\textbf{MICL: a Mixed-Initiative Control Language}
+\\ DSL Report Card}
+
+\author{Keeley Abbott \\
+School of EECS \\
+Oregon State University
+}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+The number of semi-autonomous controlled vehicles and devices entering the
+consumer and industrial markets has increased sharply in recent years. They
+have become increasingly important research tools in many fields, including
+robotics, computer science, and biology in addition to military
+applications. The majority of programs written to control these devices and
+vehicles are written in low-level languages like \prog{C}, which limits the
+amount of abstraction available to the programmers.
+
+Here we present a domain-specific language embedded in Haskell, intended to
+lift the level of abstraction available to programmers who intend to not only
+utilize the abilities of the control system, but also incorporate human
+input. Unlike previous languages, whose primary intent is to describe a
+program executed strictly by the system, our language allows for more complex
+interplay between the initiatives represented by the system, and the goals
+of the users.
+
+The specification of a program written in MICL is a description of the
+tasks to be completed by the system, as well as those that require human
+intervention or input (as they are seen by the programmer). In addition
+MICL provides the human actor the opportunity to interleave or
+intersperse their own goals and objectives as well.
+
+\subsection{Contributions}
+\label{sec:intro:contributions}
+The contributions of this paper are as follows:
+
+\begin{enumerate}[label=C\arabic*.,ref=C\arabic*,leftmargin=*]
+\item a \emph{description language} for controlling semi-autonomous
+  vehicles and devices that incorporates mundane instruction sets to be
+  executed by the system, as well as \emph{goal-directed} instruction sets to
+  be executed by the user;
+\item an \emph{execution mechanism} for control sequences that allows the
+  negotiation of \emph{flow control} within the defined program between the
+  system and the user.
+\end{enumerate}
+
+In many cases, once a program is generated for a semi-autonomous vehicle or
+device, there is little question of what is \emph{done} with that program once
+it has been written by the programmer. Our approach allows the human actor to
+provide additional insight based on previous experience or current
+circumstances that may not have been considered by the programmer.
+
+Our approach in MICL is to provide a set of descriptive, strongly typed and
+composable language features. The features are such that the type of the
+resulting execution is evident in the provided features. We provide examples
+of executing the language and show the simulation of moves performed by the
+system, as well as those performed by the human actor.
+
+MICL is an \emph{embedded domain-specific language} within Haskell that
+presents a way for programmers to design mixed-initiative controller programs
+that are strongly typed. Type information for these programs is preserved,
+making it easy to ``stitch'' together existing processes into a larger flow
+for programs, as well as modify the order of events without harming the
+integrity of the overall system-provided goals.
+
+
+\section{Users}
+\label{sec:users}
+Our language is directed at programmers of automated vehicle and device
+control sequences who are seeking to interject human interaction into their
+routines. As a side effect, the human-readable portion of these control
+sequences is heavily influenced by previous work done on how people understand
+programs written by other people. \cite{abbott2015prog}
+
+Under normal circumstances these users have a plethora of domain knowledge in
+regard to writing programs for the system components they are targeting, but
+may not have as much knowledge about dealing with the users of these
+systems. However, they often have a good understanding of the parameters and
+requirements of the programs they are writing -- where more flexibility can be
+provided to the users, and where they may need additional direction in
+accomplishing an assigned goal.
+
+Users of the programs written may have little to no coding experience,
+however they should not need additional technical background in order to
+execute the scripts provided to them by the program. They will however need to
+have some specific knowledge regarding the vehicle or device they are
+assisting the operation of -- how to take manual control when necessary, and
+how to return to a state of semi-autonomous control.
+
+We intend our DSL to be a description of interactions between a programmer
+(represented by a compiled program), and a human actor. As such much of what
+we have done with this language is contained within simulations, and so the
+code generated bears little resemblance to the low-level code that would be
+necessary to actually execute these programs on controller boards. That being
+said, there has already been some work done in the area of providing type safe
+low-level code within Haskell. \cite{elliot2015ivory}
+
+
+\section{Outcomes}
+\label{sec:outcomes}
+The output of programs written in our language are sets of control sequences
+interpreted by the system being controlled, as well as a set of annotated
+goal-directed tasks, providing the user with a protocol for the execution of
+the program. At the initialization of the program, the system will begin
+sending command sequences to the controller, and the user will begin executing
+their tasks using the instruction set provided.
+
+The program provides the user suggestions about where they can deviate or
+alter the execution of the control sequence to accomplish any number of the
+goal-directed tasks provided. In addition it provides explicit locations where
+the user can or should return to a state where the control sequence can once
+again return to a state of autonomous action.
+
+
+\section{Use Cases / Scenarios}
+\label{sec:examples}
+In this section we describe the constructs used to represent semi-autonomous
+device programs. We will introduce basic program constructs in
+Section~\ref{sec:examples:basic} and discuss the special case of human actor
+interaction in Section~\ref{sec:examples:interactive}.
+
+\subsection{Basic Program Construction}
+\label{sec:examples:basic}
+At its core, MICL provides a set of data types that represent actions that can
+be performed by semi-autonomous vehicles, which when strung together represent
+a flight path or driving directions for the vehicle or device. If these
+programs are interpreted they result in the vehicle or device servos being
+actuated in such a way that they accomplish the intermediary and longterm
+goals of the program. For example, two very simple programs might ask a drone
+to take off and climb to a determined height, or land safely.
+
+\begin{program}
+takeOff :: State Status ()
+takeOff f = do ascend fullPower `to` meters f
+\end{program}
+
+\begin{program}
+land :: State Status ()
+land = do descend fullPower `to` meters 0
+\end{program}
+
+We take advantage of the nature of the \prog{State Monad} to construct more
+complex programs from combinations of simpler ones using Haskell's \prog{do}
+notation. For example, a ``flight'' program that uses the \prog{takeOff} and
+\prog{land} to safely both take off and land a drone.
+
+\begin{program}
+takeOffAndLand :: State Status ()
+takeOffAndLand = do takeOff (meters 250)
+                    land
+\end{program}
+
+\subsection{Interactive Program Construction}
+\label{sec:examples:interactive}
+In order to achieve sharing of process flow control between the program as
+described by the programmer, and the goals presented to and derived by the
+human actor, it is necessary to model interactions between the two in order to
+negotiate this control. We represent these interactions to the user through
+the \prog{Display} field in the \prog{Status}, and they are modeled as
+either an instruction for the user to complete, or a waypoint for the user or
+the program to arrive at. The sharing of control is represented by the
+\prog{OpMode} field in the \prog{Status}, which indicates which \prog{Agent}
+has control and the current \prog{Mode} of operation.
+
+\begin{program}
+type Status = (Location,Display,OpMode)
+
+type Display = [Task]
+type Task = Either Waypoint Instruction
+type Waypoint = Location
+type Instruction = String
+\end{program}
+
+When a task is either completed or is no longer deemed required by either
+party, it can be removed from the display. Additionally, waypoints are removed
+once the user or the program has visited the location associated with that
+waypoint.
+
+We provide interaction capabilities to the user through the use of the
+\prog{interaction} construct, which is nested inside of another set or sets of
+instructions written by the programmer. This allows the user to control the
+drone, until some constraint is meant, at which point control returns to the
+system and the remainder of the program is executed as needed.
+
+\begin{program}
+interactiveFlight :: State Status ()
+interactiveFlight = do takeOff (meters 250)
+                       forward fullPower `to` meters 250
+                       strafeR fullPower `to` meters 250
+
+                       newTask (waypoint (north 0,east 0,down 0))
+                       newTask (instruction "return the drone to its home waypoint.")
+
+                       updateOpMode (wait Human)
+
+                       while (untilW [backward fullPower,strafeL fullPower]
+                              (north 0,east 0,down 250))
+
+                         untilO interaction (Computer,Wait)
+
+                       land
+\end{program}
+
+From the \prog{interaction} command the user can provide additional input
+signals to the drone in order to control its flight path, or to make changes
+to the \prog{Display} being presented to them. These input signals are
+accumulated by the state monad, and the changes are reflected to the user, and
+in the continuation of the program once the user returns control to the
+system.
+
+\section{Basic Objects}
+\label{sec:objects}
+The basic objects of MICL include signals that are passed between the program
+and the device, or between the human actor and the device. These
+\prog{Signal}s represent the operating modes of the device (whether the human
+or computer actor is supplying the input and whether the device or vehicle is
+in a ``recovery'', ``normal'', ``return'' or ``wait'' mode), as well as the
+orientation signals that control the actuation of servos on the device.
+
+\begin{program}
+data Input = Input { channel :: Agent
+                   , mode :: Mode
+                   , enable :: Bool
+                   , roll :: Float
+                   , pitch :: Float
+                   , gaz :: Float
+                   , yaw :: Float
+                   }
+
+type Output = Task
+\end{program}
+
+\begin{program}
+type Task = Either Waypoint Instruction
+
+type Waypoint = Location
+
+type Instruction = String
+
+data Agent = Human
+           | Computer
+
+data Mode = Recovery
+          | Normal
+          | Return
+          | Wait
+
+type OpMode = (Agent,Mode)
+\end{program}
+
+We use relative location for the device in order to determine when
+waypoints have been reached in addition to assigning new waypoints. This
+method of calculating the current location of the drone is known as
+dead-reckoning \cite{wikipedia2016dr}.
+
+\begin{program}
+type Location = (North,East,Down)
+
+type North = Float
+type East = Float
+type Down = Float
+\end{program}
+
+While we have addressed some of the temporal aspects of drone operation
+through our DSL in Section~\ref{sec:comb}, another way of addressing this in
+the future would be to include \emph{functional reactive programming (FRP)}
+\cite{wikipedia2016frp}. In addition to providing more concrete
+representations of time as well as functions for dealing with time-varying
+values, FRP would provide a more concrete mechanism for reacting to user
+input.
+
+Additionally, in many cases current drone manufacturers choose to eliminate
+the variable of drone orientation from their representations entirely (in fact
+this is fairly standard). While this eliminates a whole host of issues when it
+comes to calculating location (i.e. because north is always north you don't
+have to adjust when the drone spins), it is on the whole a somewhat
+unsatisfying solution. As such, there is still work to do in addressing this
+issue from the standpoint of MICL.
+
+% \TODO{We are currently still addressing the presentation of \prog{Device}s from the
+% user and programmer perspective, and how that will impact the way we handle
+% and process signals for different devices (i.e. terrestrial vehicles don't
+% have the ability to ascend or descend, so any attempt to provide \prog{gaz}
+% signals to such a device would result in errors). In the future we hope to
+% either have a more concise representation of devices, or to separate out
+% signal types based on the device types.
+
+% Additionally there is a temporal aspect that has not been fully fleshed out,
+% but will allow for real-time interaction between the program being run, and
+% the human actor observing and/or executing additional instructions. We intend
+% to accomplish this by incorporating functional reactive programming, and
+% relying on streams of events and behaviors to accumulate status results,
+% rather than using state driven updates.
+
+% Lastly, we are still in the process of addressing changes in orientation and
+% the effect on subsequent movements in regard to location. For the time being I
+% am assuming that the orientation of the device does not effect the
+% dead-reckoning location of the device -- as is the case in many commercially
+% available drones.}
+
+
+\section{Operators and Combinators}
+\label{sec:comb}
+When a \prog{Signal} is received we have to transform that into some
+meaningful transformation of the \prog{State}. In order to accomplish this, we
+have several operators for dealing with the different types of signals we
+might expect the programmer to anticipate, as well as those signal types we
+have to anticipate from the human actor. Addressing movements is the chief
+among these.
+
+\begin{program}
+type Program a = a -> State (Time,Status) ()
+
+move :: Program Input
+move sig = do (t,(loc,dis,opm)) <- get
+              put (time (addTime tick (t,(loc,dis,opm)))
+                  ,(locate sig loc,dis,opm))
+              (t,(loc,dis,opm)) <- get
+              put (t,(loc,clearWaypoint loc dis,opm))
+\end{program}
+
+In any move command we have to update the current location of the device using
+the device's maximum rate of travel and the throttle provided by the
+programmer or the human actor.
+
+\begin{program}
+locate :: Input -> Location -> Location
+locate inp loc = (locateNorth ((pitch inp) * rate)
+                  (locateEast ((roll inp) * rate)
+                   (locateDown ((gaz inp) * rate) loc)))
+
+locateNorth :: Float -> Location -> Location
+locateNorth f (n,e,d) = (n + f,e,d)
+
+locateEast :: Float -> Location -> Location
+locateEast f (n,e,d) = (n,e + f,d)
+
+locateDown :: Float -> Location -> Location
+locateDown f (n,e,d) = (n,e,d + f)
+\end{program}
+
+In addition, we have to increment \prog{time} as movement commands are
+executed, in order to accurately reflect the amount of time that has elapsed
+in the execution of a movement, and to more precisely calculate the location
+using dead-reckoning. To accomplish this, we store the current ``time'' in the
+\prog{State}, and update it as actions that consume time are executed.
+
+\begin{program}
+addTime :: Time -> (Time,Status) -> (Time,Status)
+addTime t (t',s) = (t + t',s)
+
+time :: (Time,Status) -> Time
+time (t,s) = t
+\end{program}
+
+Crafty readers may have noticed there was an additional check for the removal
+of waypoints at the end of the move command. As discussed in Section
+\ref{sec:examples:interactive} waypoints are removed from the display once
+they are visited, which means every time we move we have to check to see if a
+waypoint has been visited and clear it.
+
+\begin{program}
+clearWaypoint :: Location -> Display -> Display
+clearWaypoint _   []     = []
+clearWaypoint loc (d:ds) = case d of
+  (Left loc')
+    | loc       == loc' -> ds
+    | otherwise         -> d : clearWaypoint loc ds
+  _ -> d : clearWaypoint loc ds
+\end{program}
+
+In addition to movements, we are concerned with understanding and potentially
+changing the process control flow between the program and the human actor. As
+such, we must also update and maintain the current signal origination and the
+current mode of operation which were both discussed in Section
+\ref{sec:objects}.
+
+\begin{program}
+updateAgent :: Program Input
+updateAgent sig = do (t,(loc,dis,opm)) <- get
+                     put (t,(loc,dis,(changeAgent opm,snd opm)))
+
+updateMode :: Program Input
+updateMode sig = do (t,(loc,dis,opm)) <- get
+                    put (t,(loc,dis,(opm fst,changeMode opm)))
+
+changeAgent :: OpMode -> Agent
+changeAgent opm = case (fst opm) of
+  Computer -> Human
+  Human    -> Computer
+
+changeMode :: OpMode -> Mode
+changeMode opm = case (snd opm) of
+  Recovery -> Normal
+  Normal   -> Wait
+  Return   -> Wait
+  Wait     -> Normal
+\end{program}
+
+MICL is temporarily limited in the amount of interaction that is provided
+between the program (representing the programmer) and the human actor. There
+are further plans to address this as outlined in Section~\ref{sec:objects}
+through the use of functional reactive programming. Additionally, we discuss
+the temporary limitation that exists in the execution of orientation changing
+commands in Section~\ref{sec:objects}.
+
+One of the fundamental limitations of MICL is it's inability to compile down
+to low-level code necessary to execute on most modern controller hardware. As
+discussed in Section~\ref{sec:users}, there is a plethora of work out there
+for converting Haskell code into \prog{C} code (which is the standard language
+among controller hardware).
+
+
+\section{Interpretation and Analyses}
+\label{sec:analysis}
+Execution of simulations of programs within MICL is handled through the GHCi
+terminal screen using the \prog{State} monad, and the \prog{runState}
+function. When programs are executed, they also take advantage of Haskell's
+\prog{IO} monad to display status information to the user, as well as tasks
+and waypoints provided by the program. \prog{IO} is also the means of
+receiving commands from the user, and transmitting the signals back to the
+drone.
+
+In order to execute a program in MICL, the user provides the program to be
+run, and an initial \prog{state} for the program to operate on. In MICL we
+provide a \prog{statusDefault} construct that initiates the drone with a
+starting location of \prog{(north 0,east 0,down 0)}, an empty beginning
+display, and an \prog{OpMode} of \prog{(Computer,Normal)}.
+
+\begin{program}
+statusDefault :: (Time,Status)
+statusDefault = (seconds 0.0,((north meters 0.0,east meters 0.0,down meters 0.0)
+                             ,[],(Computer,Normal)))
+
+> runState simpleGrid statusDefault
+((),(62.0,((0.0,0.0,0.0),[],(Computer,Normal))))
+\end{program}
+
+Interrupts in the program provide the user with an \prog{IO} screen with
+command options for the user to execute.
+
+
+\section{Cognitive Dimension Evaluation}
+\label{sec:cogdim}
+\subsection{Abstraction Gradient}
+\label{sec:cogdim:abstr}
+MICL is an \emph{abstraction-tolerant} language that permits the use of
+constructs exactly as they come, however owing to its affinity for composing
+functions and programs, it allows for the creation of additional
+abstractions. The level of abstraction available from MICL is initially low,
+which allows it to be used by less experienced programmers more easily. Novice
+programmers can start by understanding the high-level concepts behind signals.
+
+\subsection{Closeness of Mapping}
+\label{sec:cogdim:map}
+Problems that can be modeled in MICL as programs are mapped relatively closely
+to those that can be observed in the real world. We are able to map entities
+in the user's task domain directly to task-specific program entities, and
+operations on the program entities can be likewise mapped directly onto
+program operations.
+
+\subsection{Consistency}
+\label{sec:cogdim:cons}
+One area that MICL has issues in accomplishing is consistency. While the
+constructs within the language are fairly easy to understand once they have
+been learned, it may be more difficult for users to ``guess'' at additional
+constructs they may not have learned yet. In addition, the \prog{do} notation
+that we rely on may present a barrier to users of other languages where this
+type of notation has a different meaning.
+
+\subsection{Diffuseness/Terseness}
+\label{sec:cogdim:diff}
+MICL has a relatively compact field of notation to achieve resulting programs
+written in the language. As such, and also owing to its relative closeness of
+mapping with the problem world, it offers a fairly terse representation to
+users and programmers. MICL requires relatively few lexemes to achieve
+resulting programs.
+
+
+\section{Implementation Strategy}
+\label{sec:implementation}
+Using a shallow embedding allows us to take advantage of Haskell's \prog{do}
+notation as a way of representing program syntax within MICL. Additionally, we
+have the luxury of easily composing programs that have already been written
+by using of \prog{State} management using monads. However, because MICL does
+not compile to low-level code there is some additional work that would need to
+be done in order for programs to be run directly on vehicle or device
+hardware.
+
+Implementation of MICL in a \emph{language workbench} might be advantageous,
+because we could compose MICL with some similar EDSLs that do compile down to
+low-level code that can be run directly on controller hardware.  One example
+of a language that it would be advantageous to compose MICL with would be
+Ivory \cite{elliot2015ivory}. The framework is already there to compile
+Haskell code to \prog{safe-C}, and by taking advantage of this we need not
+compile the code from directly within MICL.
+
+
+\section{Find Similar/Related DSLs}
+\label{sec:related}
+As we mentioned in Section \ref{sec:users} there exist languages and libraries
+within Haskell that deal with compiling or writing \prog{safe-C} code, such as
+Ivory \cite{elliot2015ivory}, and Copilot \cite{pike2010copilot}. Both of
+these language extensions are designed to be used with controllers, and
+compile \prog{safe-C} code from Haskell that can be run directly on current
+controller hardware.
+
+Ivory has been used to implement code that can be run directly on Ardupilot
+hardware, and has been used to generate over 200,000 lines of code for
+SMACCMPilot as well. In addition, this language has been used in Boeing's
+STANAG486 program to pilot an unmanned helicopter through real-world
+situations \cite{boeing2016auto}. Unfortunately the structure of the language
+presented by Ivory can be a bit difficult to decipher at times, and it is
+unknown if the design decision to map the language closely with the compiled
+code represents an additional difficulty for programmers.
+
+Copilot on the other hand is a runtime system that generates streams of small
+constant-space and constant-time \prog{C} programs that implement embedded
+monitoring. Because Copilot also generates its own scheduler, there isn't any
+need to implement a real-time operating system in conjunction with it.
+
+Where both of these approaches differ from MICL, is in the availability and
+representation of interactions between the system and the human actor
+executing the program. In MICL we treat these interactions as first-class
+citizens, rather than as an afterthought.
+
+
+\section{Design Evolution}
+\label{sec:evol}
+When we originally began working with the \prog{State} monad, we thought of a
+\prog{Program} as simply a \prog{Signal -> State Status ()}, however as we
+worked with this design, it became increasingly apparent that we were going to
+have to take \prog{Time} into account.
+
+\begin{program}
+type Program = Signal -> State (Time,Status) ()
+\end{program}
+
+This allowed us to include time-based functions that would execute a given
+program at a specified time as well, or react to the passage of time in
+different ways.
+
+\begin{program}
+at :: Program Input -> Time -> Input -> State (Time,Status) ()
+at prg t inp = do (t',s) <- get
+                  case (t == t') of
+                    True  -> prg inp
+                    False -> return ()
+
+untilT :: [Input] -> Time -> State (Time,Status) ()
+untilT []     tme = do return ()
+untilT (i:is) tme = do (t,s) <- get
+                       case (t == tme) of
+                         False -> i `to` (projectLoc i s) >> untilT is tme
+                         True  -> return ()
+\end{program}
+
+In addition, we realized there were different signal types we would have to
+take into consideration -- \prog{Input} and \prog{Output}
+signals. \prog{Input} signals are those that provide instructions to the drone
+in order to actuate motors and control the amount of power being sent to
+them. \prog{Output} signals are those that provide instructions and
+information to the user about the goal-directed tasks.
+
+\begin{program}
+type Program a = a -> State (Time,Status) ()
+\end{program}
+
+One advantage of this design, is that we can accommodate other types of
+\prog{Signals} provided by the programmer that may not have already been
+considered in the current design.
+
+
+\section{Future Work}
+\label{sec:future}
+In order to resolve the temporary limitations of the language mentioned in
+Section~\ref{sec:comb} we intend to implement MICL as a deeply embedded FRP
+language in Haskell. The long-term goal being to provide more seamless
+interaction between the system and the human actor, as well as allow us to
+perform additional analysis on the language.
+
+Another advantage of incorporating FRP into the design of the language is the
+ability to further refine the \prog{Display} system within MICL. Most FRP
+libraries also include visualization extensions that will allow us to provide
+the user with a more polished GUI. This will also give us the ability to
+display the user instructions and waypoints in a more human-readable
+protocol-like manner.
+
+Currently MICL is focused on the domain of drones, but there are other
+controller environments that could take advantage of the language we have
+built. In order to do so, we need to generalize the language constructs
+further, and this can potentially be assisted through the \emph{deepening} of
+the language into a \emph{final} form.
+
+
+\bibliographystyle{abbrv}
+\bibliography{micl}
+
+
+
+\end{document}

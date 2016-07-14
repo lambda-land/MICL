@@ -1,4 +1,4 @@
-module ReactiveMICL where
+module ReActMICL where
 
 -- | so, to focus more on the interactive side of this, and really
 --   make interactions first-class citizens, I want to focus on the
@@ -15,6 +15,9 @@ module ReactiveMICL where
 --   instructions to the user for consumption (these instructions might
 --   include waypoints that need to be visited, or other useful
 --   information of the user).
+--   there will also be actions initiated by the user that might
+--   interrupt the course of actions being taken by the programmer, but
+--   may also enhance those actions.
 --
 
 -- | REACTIONS
@@ -23,37 +26,57 @@ module ReactiveMICL where
 --   programmed reaction. when the drone encounters an unexpected event,
 --   the user should be notified and (potentially) prompted with a
 --   solution.
---   similarly, when a human actor encoounters an expected event, there
+--   similarly, when a human actor encounters an expected event, there
 --   is no need to "interrupt" the user, however, if the user encounters
 --   an unexpected event there may be need for the user to prompt the
 --   program or the drone to provide additional advice or instruction.
 --
 
-data Action a = IA a Instruction
-              | MA a
-              | SA a [Action a]
+data Action a = MoveA a
+              | PromptA a Task
+              | SeqA a [Action a]
               deriving Show
+
+data Reaction a = MoveR a
+                | Exception a OpMode
+                | PromptR a Task
+                | SeqR a [Reaction a]
+                deriving Show
+
+type Task = Either Waypoint Instruction
+
+type Waypoint = Location
+type Location = (North,East,Down)
+type North = Double
+type East = Double
+type Down = Double
 
 type Instruction = String
 
-data Reaction a = IR a Instruction
-                | MR a
-                | SR a [Reaction a]
-                deriving Show
-
-data Signal a = Signal a { channel :: Agent
-                         , enable :: Bool
-                         , roll :: Double
-                         , pitch :: Double
-                         , gaz :: Double
-                         , yaw :: Double
-                         }
-              deriving Show
+type OpMode = (Agent,Mode)
 
 data Agent = Human
            | Computer
            deriving Show
 
-data Flag = Exception
-          | NoException
+data Mode = Recovery
+          | Normal
+          | Return
+          | Wait
           deriving Show
+
+data Signal = Program { enable :: Bool
+                      , roll :: Double
+                      , pitch :: Double
+                      , gaz :: Double
+                      , yaw :: Double
+                      }
+            | Controller { enable :: Bool
+                         , roll :: Double
+                         , pitch :: Double
+                         , gaz :: Double
+                         , yaw :: Double
+                         }
+            deriving Show
+
+a1 = MoveA Program { enable = True, roll = 0, pitch = 0, gaz = 1, yaw = 0 }

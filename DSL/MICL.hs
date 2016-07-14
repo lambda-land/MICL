@@ -149,11 +149,14 @@ deleteTask tsk (d:ds) = case tsk of
       | otherwise         -> d : deleteTask tsk ds
 
 clearWaypoint :: Location -> Display -> Display
-clearWaypoint loc [] = []
-clearWaypoint loc (d:ds) = case d of
-  (Left loc')
-    | loc       == loc' -> ds
-    | otherwise         -> d : clearWaypoint loc ds
+-- clearWaypoint loc [] = []
+-- clearWaypoint loc (d:ds) = case d of
+--   (Left loc')
+--     | loc       == loc' -> ds
+--     | otherwise         -> d : clearWaypoint loc ds
+clearWaypoint loc ds = filter clear ds
+  where clear (Left loc') = loc /= loc'
+        clear _           = True
 
 
 -- | semantic domain

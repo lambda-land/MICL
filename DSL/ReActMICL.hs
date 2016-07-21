@@ -32,16 +32,16 @@ module ReActMICL where
 --   program or the drone to provide additional advice or instruction.
 --
 
-data Action a = MoveA a
-              | PromptA a Task
-              | SeqA a [Action a]
-              deriving Show
+data Prog a = MoveA a
+            | PromptA a Task
+            | SeqA a [Prog a]
+            deriving Show
 
-data Reaction a = MoveR a
-                | Exception a OpMode
-                | PromptR a Task
-                | SeqR a [Reaction a]
-                deriving Show
+data React a = MoveR a
+             | Exception a OpMode
+             | PromptR a Task
+             | SeqR a [React a]
+             deriving Show
 
 type Task = Either Waypoint Instruction
 
@@ -65,18 +65,22 @@ data Mode = Recovery
           | Wait
           deriving Show
 
-data Signal = Program { enable :: Bool
-                      , roll :: Double
-                      , pitch :: Double
-                      , gaz :: Double
-                      , yaw :: Double
-                      }
-            | Controller { enable :: Bool
-                         , roll :: Double
-                         , pitch :: Double
-                         , gaz :: Double
-                         , yaw :: Double
-                         }
+data Signal = Signal { order :: Int,
+                       agent :: Agent,
+                       enable :: Bool,
+                       roll :: Float,
+                       pitch :: Float,
+                       gaz :: Float,
+                       yaw :: Float,
+                       instruction :: String
+                     }
             deriving Show
 
-a1 = MoveA Program { enable = True, roll = 0, pitch = 0, gaz = 1, yaw = 0 }
+a1 = MoveA Signal { order = 1
+                  , agent = Computer
+                  , enable = True
+                  , roll = 0
+                  , pitch = 0
+                  , gaz = 1
+                  , yaw = 0
+                  , instruction = "" }

@@ -1,5 +1,7 @@
 \documentclass{sig-alternate-05-2015}
 
+\usepackage{lambda}
+\renewcommand{\progfontsize}{\normalsize}
 
 \begin{document}
 
@@ -13,7 +15,7 @@
 % \acmPrice{\$15.00}
 % \conferenceinfo{WOODSTOCK}{'97 El Paso, Texas USA}
 
-\title{MIDAS: a real-time mixed-initaitive drone language}
+\title{MICL: a real-time mixed-initaitive drone language}
 \subtitle{[Extended Abstract]}
 % \titlenote{A full version of this paper is available as
 % \textit{Author's Guide to Preparing ACM SIG Proceedings Using
@@ -94,9 +96,56 @@ Eric Walkingshaw\\
 \keywords{ACM proceedings; \LaTeX; text tagging}
 
 \section{Introduction}
+\label{sec:intro}
+The number of semi-autonomous controlled vehicles and devices entering the
+consumer and industrial markets has increased sharply in recent years. They
+have become increasingly important research tools in many fields, including
+robotics, computer science, and biology in addition to military
+applications. The majority of programs written to control these devices and
+vehicles are written in low-level languages like \prog{C}, which limits the
+amount of abstraction available to the programmers.
+
+Here we present a domain-specific language embedded in Haskell, intended to
+lift the level of abstraction available to programmers who intend to not only
+utilize the abilities of the control system, but also incorporate human
+input. Unlike previous languages, whose primary intent is to describe a
+program executed strictly by the system, our language allows for more complex
+interplay between the initiatives represented by the system, and the goals
+of the users.
+
+The specification of a program written in MICL is a description of the
+tasks to be completed by the system, as well as those that require human
+intervention or input (as they are seen by the programmer). In addition
+MICL provides the human actor the opportunity to interleave or
+intersperse their own goals and objectives as well.
 
 
 \section{Related Work}
+\label{sec:related}
+There exist languages and libraries within Haskell that deal with compiling or
+writing \prog{safe-C} code, such as Ivory \cite{elliot2015ivory}, and Copilot
+\cite{pike2010copilot}. Both of these language extensions are designed to be
+used with controllers, and compile \prog{safe-C} code from Haskell that can be
+run directly on current controller hardware.
+
+Ivory has been used to implement code that can be run directly on Ardupilot
+hardware, and has been used to generate over 200,000 lines of code for
+SMACCMPilot as well. In addition, this language has been used in Boeing's
+STANAG486 program to pilot an unmanned helicopter through real-world
+situations \cite{boeing2016auto}. Unfortunately the structure of the language
+presented by Ivory can be a bit difficult to decipher at times, and it is
+unknown if the design decision to map the language closely with the compiled
+code represents an additional difficulty for programmers.
+
+Copilot on the other hand is a runtime system that generates streams of small
+constant-space and constant-time \prog{C} programs that implement embedded
+monitoring. Because Copilot also generates its own scheduler, there isn't any
+need to implement a real-time operating system in conjunction with it.
+
+Where both of these approaches differ from MICL, is in the availability and
+representation of interactions between the system and the human actor
+executing the program. In MICL we treat these interactions as first-class
+citizens, rather than as an afterthought.
 
 
 \bibliographystyle{abbrv}

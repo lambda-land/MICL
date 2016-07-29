@@ -46,11 +46,12 @@ has direct application in the use of drones as tools in the scientific and
 consumer communities. This language facilitates the explanations of
 interactions between the system -- represented by the programmer -- and the
 human actor by allowing for a flexible flow of control between the two. We use
-the facilities of the human actor by providing them the ability to
-directly manipulate the course of the drone based on updated information and
-user intuitions. At the same time, we limit the need for programmers to
-foresee all possible contingencies by providing variability around control
-points within the program.
+the facilities of the human actor by providing them the ability to directly
+manipulate the course of the drone based on updated information and user
+intuitions. At the same time, we limit the need for programmers to foresee all
+possible contingencies by providing variability around control points within
+the program. In addition MICL utilizes functional reactive programming to
+allow users access to real-time interaction with the system.
 \end{abstract}
 
 
@@ -151,13 +152,33 @@ alter flight programs as need dictates, while at the same time remaining
 disconnected from the processes programmed until the need arises, or
 additional information dictates a change.
 
-In this paper we introduce an domain-specific language that is functionally
-reactive and allows for the interleaving of human actor directives, with those
-supplied by the programmer. It also allows for timed or event based
-interventions or triggers for further program execution. This provides a
-degree of variability within drone programming that takes into account the
-most up-to-date information and directives, while allowing for automation of
-the process whenever outside intervention is not necessary.
+For example, a programmer codes a drone to use a flight pattern to perform
+a search within a prescribed area or boundary, and in addition provides the
+human actor with an intended search target and/or some set of goal-directed
+tasks that need to be accomplished. We know from previous research
+\cite{abbott2015prog} that users adopt human instructions or programs more
+readily when they are supplied in a linear fashion (giving the user a
+high-level overview of the process). These instruction sets also need to
+provide users with derivation points that allow them the freedom to modify
+instructions as needed, while simultaneously providing guideposts for error
+recovery and locations to return to the original protocol.
+
+MICL provides the programmer the tools necessary to program the more mundane
+tasks that must be executed by the drone to achieve a goal, while at the same
+time providing the human actor with the tools and freedom to make
+modifications to the flight program without jeopardizing the original intent
+of the programmer. Programs are easily recovered or restored to their initial
+settings, but are flexible enough to allow for continued execution if the user
+modifies a flight path or pattern or adds and removes goal-directed tasks.
+
+In this paper we introduce an embedded domain-specific language that is
+functionally reactive and allows for the interleaving of human actor
+directives, with those supplied by the programmer. It also allows for timed or
+event based interventions or triggers for further program execution. This
+provides a degree of variability within drone programming that takes into
+account the most up-to-date information and directives as supplied by the
+human actor, while allowing for automation of the process whenever outside
+intervention is unnecessary.
 
 
 \section{Motivation}

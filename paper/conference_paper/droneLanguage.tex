@@ -1,7 +1,22 @@
 \documentclass{sig-alternate-05-2015}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\usepackage[override]{cmtt}
+\usepackage[inline]{enumitem}
+\usepackage[draft]{hyperref}
+\usepackage{cite}
 
 \usepackage{lambda}
 \renewcommand{\progfontsize}{\normalsize}
+\usepackage{listings}
+
+\lstset{
+  language=Haskell,
+  keepspaces,
+  deletekeywords={foldr,replicate,map,sqrt,fromJust,Int,Bool,False,True,Show,Read,Maybe,Just,Nothing,String},
+  basicstyle=\ttfamily %\bfseries
+}
 
 \begin{document}
 
@@ -152,17 +167,6 @@ alter flight programs as need dictates, while at the same time remaining
 disconnected from the processes programmed until the need arises, or
 additional information dictates a change.
 
-For example, a programmer codes a drone to use a flight pattern to perform
-a search within a prescribed area or boundary, and in addition provides the
-human actor with an intended search target and/or some set of goal-directed
-tasks that need to be accomplished. We know from previous research
-\cite{abbott2015prog} that users adopt human instructions or programs more
-readily when they are supplied in a linear fashion (giving the user a
-high-level overview of the process). These instruction sets also need to
-provide users with derivation points that allow them the freedom to modify
-instructions as needed, while simultaneously providing guideposts for error
-recovery and locations to return to the original protocol.
-
 MICL provides the programmer the tools necessary to program the more mundane
 tasks that must be executed by the drone to achieve a goal, while at the same
 time providing the human actor with the tools and freedom to make
@@ -180,17 +184,14 @@ account the most up-to-date information and directives as supplied by the
 human actor, while allowing for automation of the process whenever outside
 intervention is unnecessary.
 
-
-\section{Motivation}
-\label{sec:motivation}
-Biological and environmental surveying utilizing drones and other semi-autonomous
-controlled vehicles contains elements of mundane tasks that are easily
-relegated to systematic evaluation of a program. However, there are tasks
-within these routines that benefit from the ability of human actors to quickly
-identify visual patterns, and process that data into updated actions or
-directives. Unforeseen complications when laying out a search grid presented
-by terrain or deviations in the behavior of wildlife being surveyed may
-necessitate changes to the survey route in real time.
+% Biological and environmental surveying utilizing drones and other semi-autonomous
+% controlled vehicles contains elements of mundane tasks that are easily
+% relegated to systematic evaluation of a program. However, there are tasks
+% within these routines that benefit from the ability of human actors to quickly
+% identify visual patterns, and process that data into updated actions or
+% directives. Unforeseen complications when laying out a search grid presented
+% by terrain or deviations in the behavior of wildlife being surveyed may
+% necessitate changes to the survey route in real time.
 
 Human actors have been used to identify visual patterns as well as in aerial
 search activities in the form of crowd-sourcing applications
@@ -217,6 +218,65 @@ benefit of making new information gathered by the human actor's visual pattern
 matching skills more readily available in addition to allowing us to take
 advantage of the human actor's skills and knowledge that may supersede that of
 the original goals or programming.
+
+\subsection{Contributions}
+\label{sec:intro:contr}
+The contributions of this work are as follows:
+
+\begin{enumerate}[label=C\arabic*.,ref=C\arabic*,leftmargin=*]
+\item a \emph{description language} for controlling semi-autonomous
+  vehicles and devices that incorporates mundane instruction sets to be
+  executed by the system, as well as \emph{goal-directed} instruction sets to
+  be executed by the user;
+\item an \emph{execution mechanism} for control sequences that allows the
+  negotiation of \emph{flow control} within the defined program between the
+  system and the user, that represents an application of the design insights
+  from previous work on programs for people \cite{abbott2015prog};
+\item an \emph{application} of Functional Reactive Programming to the problem
+  set of Mixed-initiative Execution Systems.
+\end{enumerate}
+
+In many cases, once a program is generated for a semi-autonomous vehicle or
+device, there is little question of what is \emph{done} with that program once
+it has been written by the programmer. Our approach allows the human actor to
+provide additional insight based on previous experience or current
+circumstances that may not have been considered by the programmer.
+
+Our approach in MICL is to provide a set of descriptive, strongly typed and
+composable language features. The features are such that the type of the
+resulting execution is evident in the provided features. We provide examples
+of executing the language and show the simulation of moves performed by the
+system, as well as those performed by the human actor.
+
+MICL is an \emph{embedded domain-specific language} within Haskell that
+presents a way for programmers to design mixed-initiative controller programs
+that are strongly typed. Type information for these programs is preserved,
+making it easy to ``stitch'' together existing processes into a larger flow
+for programs, as well as modify the order of events without harming the
+integrity of the overall system-provided goals.
+
+\section{Example}
+\label{sec:example}
+For example, a programmer codes a drone to use a flight pattern to perform
+a search within a prescribed area or boundary, and in addition provides the
+human actor with an intended search target and/or some set of goal-directed
+tasks that need to be accomplished. We know from previous research
+\cite{abbott2015prog} that users adopt human instructions or programs more
+readily when they are supplied in a linear fashion (giving the user a
+high-level overview of the process). These instruction sets also need to
+provide users with derivation points that allow them the freedom to modify
+instructions as needed, while simultaneously providing guideposts for error
+recovery and locations to return to the original protocol.
+
+\begin{lstlisting}
+search (takeOff (grid = (north (100 m),east (100 m),down (50 m)))
+        (pattern = radial `fromCenter` (2 m)
+         (instructions { waypoints = [home = center],
+                         goals = ["tag squirrels",
+                                  "suggest new search quadrant",
+                                  "return drone to home"
+                                 ]})))
+\end{lstlisting}
 
 
 \section{Related Work}
@@ -245,6 +305,10 @@ Where both of these approaches differ from MICL, is in the availability and
 representation of interactions between the system and the human actor
 executing the program. In MICL we treat these interactions as first-class
 citizens, rather than as an afterthought.
+
+\TODO{Short section on where we plan to go with the paper before Aug 22nd. Can
+be a small section written on Monday before we submit. Prototype of the DSL
+working by the 22nd -- and in the near future actually working on a drone.}
 
 
 \bibliographystyle{abbrv}

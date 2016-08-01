@@ -1,5 +1,21 @@
 \documentclass{sig-alternate-05-2015}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 
+\usepackage[override]{cmtt}
+\usepackage[inline]{enumitem}
+\usepackage[draft]{hyperref}
+\usepackage{cite}
+
+\usepackage{lambda}
+\renewcommand{\progfontsize}{\normalsize}
+\usepackage{listings}
+
+\lstset{
+  language=Haskell,
+  showstringspaces=false,
+  basicstyle=\ttfamily\scriptsize %\bfseries
+}
 
 \begin{document}
 
@@ -13,7 +29,7 @@
 % \acmPrice{\$15.00}
 % \conferenceinfo{WOODSTOCK}{'97 El Paso, Texas USA}
 
-\title{MIDAS: a real-time mixed-initaitive drone language}
+\title{MICL: a real-time mixed-initaitive drone language}
 \subtitle{[Extended Abstract]}
 % \titlenote{A full version of this paper is available as
 % \textit{Author's Guide to Preparing ACM SIG Proceedings Using
@@ -38,7 +54,18 @@ Eric Walkingshaw\\
 
 \maketitle
 \begin{abstract}
-
+We present an embedded domain-specific language for programming
+semi-autonomous drones, which is based on functional reactive programming and
+has direct application in the use of drones as tools in the scientific and
+consumer communities. This language facilitates the explanations of
+interactions between the system -- represented by the programmer -- and the
+human actor by allowing for a flexible flow of control between the two. We use
+the facilities of the human actor by providing them the ability to directly
+manipulate the course of the drone based on updated information and user
+intuitions. At the same time, we limit the need for programmers to foresee all
+possible contingencies by providing variability around control points within
+the program. In addition MICL utilizes functional reactive programming to
+allow users access to real-time interaction with the system.
 \end{abstract}
 
 
@@ -91,12 +118,239 @@ Eric Walkingshaw\\
 
 \printccsdesc
 
-\keywords{ACM proceedings; \LaTeX; text tagging}
+\keywords{}
 
 \section{Introduction}
+\label{sec:intro}
+The number of semi-autonomous controlled vehicles and devices entering the
+consumer and industrial markets has increased sharply in recent years. They
+have become increasingly important research tools in many fields, including
+robotics, computer science, and biology in addition to military
+applications. The majority of programs written to control these devices and
+vehicles are written in low-level languages like \prog{C}, which limits the
+amount of abstraction available to the programmers.
+
+Here we present a domain-specific language embedded in Haskell, intended to
+lift the level of abstraction available to programmers who intend to not only
+utilize the abilities of the control system, but also incorporate human
+input. Unlike previous languages, whose primary intent is to describe a
+program executed strictly by the system, our language allows for more complex
+interplay between the initiatives represented by the system, and the goals
+of the users.
+
+The specification of a program written in MICL is a description of the
+tasks to be completed by the system, as well as those that require human
+intervention or input (as they are seen by the programmer). In addition
+MICL provides the human actor the opportunity to interleave or
+intersperse their own goals and objectives as well.
+
+% Surveying as well as search and rescue operations contain elements of mundane
+% tasks that can be accommodated by a programmer directly in addition to tasks
+% that are often more easily and quickly accomplished by a human actor. A survey
+% or search grid can be easily laid out in advance, but there are often
+% unforeseen complications presented by the terrain, as well as deviations in the
+% behavior of the objects or entities being surveyed or sought.
+
+% These complications can be quickly adapted to by a human actor, whereas
+% programming for such contingencies could prove tedious and incomplete. By
+% placing the facilities of the drone at the disposal of the human actor, while
+% at the same time maintaining a record of the prescribed tasks that can be
+% autonomously executed allows the system to execute more effectively. The user
+% can focus on the less predictable variables presented to the drone during its
+% search pattern, and react to the environmental complications that may or could
+% not have been anticipated by the programmer.
+
+This allows for more generalized flight control programs that are quickly and
+easily adaptable by human actors in the wild. The human user can combine or
+alter flight programs as need dictates, while at the same time remaining
+disconnected from the processes programmed until the need arises, or
+additional information dictates a change.
+
+MICL provides the programmer the tools necessary to program the more mundane
+tasks that must be executed by the drone to achieve a goal, while at the same
+time providing the human actor with the tools and freedom to make
+modifications to the flight program without jeopardizing the original intent
+of the programmer. Programs are easily recovered or restored to their initial
+settings, but are flexible enough to allow for continued execution if the user
+modifies a flight path or pattern or adds and removes goal-directed tasks.
+
+In this paper we introduce an embedded domain-specific language that is
+functionally reactive and allows for the interleaving of human actor
+directives, with those supplied by the programmer. It also allows for timed or
+event based interventions or triggers for further program execution. This
+provides a degree of variability within drone programming that takes into
+account the most up-to-date information and directives as supplied by the
+human actor, while allowing for automation of the process whenever outside
+intervention is unnecessary.
+
+% Biological and environmental surveying utilizing drones and other semi-autonomous
+% controlled vehicles contains elements of mundane tasks that are easily
+% relegated to systematic evaluation of a program. However, there are tasks
+% within these routines that benefit from the ability of human actors to quickly
+% identify visual patterns, and process that data into updated actions or
+% directives. Unforeseen complications when laying out a search grid presented
+% by terrain or deviations in the behavior of wildlife being surveyed may
+% necessitate changes to the survey route in real time.
+
+Human actors have been used to identify visual patterns as well as in aerial
+search activities in the form of crowd-sourcing applications
+\cite{quinn2011hc}. Often these tasks come in the form of games, or provide
+some monetary compensation for the user's time in classifying or searching
+images for data. Frameworks for distributing these tasks to the crowd have
+also been developed to assist programmers in developing their queries and
+honing them through successive collections of data obtained from the crowd
+\cite{little2010turkit}.
+
+One difficulty that is often encountered when using crowd-sourcing for the
+purposes of surveying or search and rescue, is that the queries often take a
+long time to return results. Which can degrade the chances of a successful
+outcome, and can result in the use of outdated information when reacting to
+data collected from participants. To some extent this can be mitigated with
+the use of increased monetary incentives to the crowd participants. In
+addition to timing issues, crowd-sourcing applications often treat humans as
+monetized data processing labor, and fail to take advantage of the crowd's
+facilities beyond visual pattern matching.
+
+In MICL, we allow the human actor to directly interact with and manipulate the
+flow of control and the expected outcomes in real time. This provides the
+benefit of making new information gathered by the human actor's visual pattern
+matching skills more readily available in addition to allowing us to take
+advantage of the human actor's skills and knowledge that may supersede that of
+the original goals or programming.
+
+\subsection{Contributions}
+\label{sec:intro:contr}
+The contributions of this work are as follows:
+
+\begin{enumerate}[label=C\arabic*.,ref=C\arabic*,leftmargin=*]
+\item a \emph{description language} for controlling semi-autonomous
+  vehicles and devices that incorporates mundane instruction sets to be
+  executed by the system, as well as \emph{goal-directed} instruction sets to
+  be executed by the user;
+\item an \emph{execution mechanism} for control sequences that allows the
+  negotiation of \emph{flow control} within the defined program between the
+  system and the user, that represents an application of the design insights
+  from previous work on programs for people \cite{abbott2015prog};
+\item an \emph{application} of Functional Reactive Programming to the problem
+  set of Mixed-initiative Execution Systems.
+\end{enumerate}
+
+In many cases, once a program is generated for a semi-autonomous vehicle or
+device, there is little question of what is \emph{done} with that program once
+it has been written by the programmer. Our approach allows the human actor to
+provide additional insight based on previous experience or current
+circumstances that may not have been considered by the programmer.
+
+Our approach in MICL is to provide a set of descriptive, strongly typed and
+composable language features. The features are such that the type of the
+resulting execution is evident in the provided features. We provide examples
+of executing the language and show the simulation of moves performed by the
+system, as well as those performed by the human actor.
+
+MICL is an \emph{embedded domain-specific language} within Haskell that
+presents a way for programmers to design mixed-initiative controller programs
+that are strongly typed. Type information for these programs is preserved,
+making it easy to ``stitch'' together existing processes into a larger flow
+for programs, as well as modify the order of events without harming the
+integrity of the overall system-provided goals.
+
+\section{Example}
+\label{sec:example}
+For example, a programmer codes a drone to use a flight pattern to perform
+a search within a prescribed area or boundary, and in addition provides the
+human actor with an intended search target and/or some set of goal-directed
+tasks that need to be accomplished. We know from previous research
+\cite{abbott2015prog} that users adopt human instructions or programs more
+readily when they are supplied in a linear fashion (giving the user a
+high-level overview of the process). These instruction sets also need to
+provide users with derivation points that allow them the freedom to modify
+instructions as needed, while simultaneously providing guideposts for error
+recovery and locations to return to the original protocol.
+
+\begin{lstlisting}[breaklines=true]
+search :: Program
+search = (takeOff (grid = (north (100 m),
+                           east (100 m),
+                           down (50 m)))
+          (pattern = radial `fromCenter` (2 m)
+           (instructions
+            { waypoints = [home = center],
+              goals = ["tag squirrels",
+                       "suggest new search quadrant",
+                       "return drone to home"
+                      ]})))
+\end{lstlisting}
+
+In this example, the programmer is able to use the predefined \prog{takeOff}
+program that (when supplied with a ceiling -- or \prog{down} parameter) causes
+the drone to lift off from the ground at the current spot, and accelerate
+upwards until it reaches the ceiling value. The \prog{grid} constructor
+supplies \prog{takeOff} with the necessary ceiling parameter, but also
+outlines a search grid for the drone (essentially a 100 meter by 100 meter
+square).
+
+\prog{pattern} tells the drone how to cover the prescribed grid, and
+\prog{radial (2 m)} tells the drone to radiate from a given point circling
+2 meters from the previous path with each pass. \prog{fromCenter} is used in
+an ``inline'' fashion for convenience sake, and instructs the drone to begin
+the indicated pattern from the center of the prescribed grid. Which means that
+once the drone takes off, it will fly to the center of the grid, and works
+it's way to the edges using the radial pattern described.
+
+\prog{instructions} provide some tasks for the human actor to complete, and
+are goal-directed in nature. These tasks provide the user some end goal they
+need to reach (as well as some potential guidance if the user encounters
+trouble or diverges from the initial path), but does not specify for the user
+how to complete that goal. Some informational text is provided to the user via
+the user interface at the start of the search, and there are guideposts for
+the user to follow to ensure they are on the correct path as well.
+
+\begin{lstlisting}
+searchText :: Interface
+searchText = (information
+              [("tag squirrels",
+                "create a new waypoint"),
+               ("suggest new search quadrant",
+                "use waypoint to re-center quadrant,
+                 or specify new home location"),
+               ("return drone home",
+                "manually fly the drone back to the
+                 home location, or specify new home
+                 location with waypoint")
+               ])
+\end{lstlisting}
 
 
 \section{Related Work}
+\label{sec:related}
+There exist languages and libraries within Haskell that deal with compiling or
+writing \prog{safe-C} code, such as Ivory \cite{elliot2015ivory}, and Copilot
+\cite{pike2010copilot}. Both of these language extensions are designed to be
+used with controllers, and compile \prog{safe-C} code from Haskell that can be
+run directly on current controller hardware.
+
+Ivory has been used to implement code that can be run directly on Ardupilot
+hardware, and has been used to generate over 200,000 lines of code for
+SMACCMPilot as well. In addition, this language has been used in Boeing's
+STANAG486 program to pilot an unmanned helicopter through real-world
+situations \cite{boeing2016auto}. Unfortunately the structure of the language
+presented by Ivory can be a bit difficult to decipher at times, and it is
+unknown if the design decision to map the language closely with the compiled
+code represents an additional difficulty for programmers.
+
+Copilot on the other hand is a runtime system that generates streams of small
+constant-space and constant-time \prog{C} programs that implement embedded
+monitoring. Because Copilot also generates its own scheduler, there isn't any
+need to implement a real-time operating system in conjunction with it.
+
+Where both of these approaches differ from MICL, is in the availability and
+representation of interactions between the system and the human actor
+executing the program. In MICL we treat these interactions as first-class
+citizens, rather than as an afterthought.
+
+\TODO{Short section on where we plan to go with the paper before Aug 22nd. Can
+be a small section written on Monday before we submit. Prototype of the DSL
+working by the 22nd -- and in the near future actually working on a drone.}
 
 
 \bibliographystyle{abbrv}

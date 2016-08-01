@@ -13,9 +13,8 @@
 
 \lstset{
   language=Haskell,
-  keepspaces,
-  deletekeywords={foldr,replicate,map,sqrt,fromJust,Int,Bool,False,True,Show,Read,Maybe,Just,Nothing,String},
-  basicstyle=\ttfamily %\bfseries
+  showstringspaces=false,
+  basicstyle=\ttfamily\scriptsize %\bfseries
 }
 
 \begin{document}
@@ -268,14 +267,57 @@ provide users with derivation points that allow them the freedom to modify
 instructions as needed, while simultaneously providing guideposts for error
 recovery and locations to return to the original protocol.
 
+\begin{lstlisting}[breaklines=true]
+search :: Program
+search = (takeOff (grid = (north (100 m),
+                           east (100 m),
+                           down (50 m)))
+          (pattern = radial `fromCenter` (2 m)
+           (instructions
+            { waypoints = [home = center],
+              goals = ["tag squirrels",
+                       "suggest new search quadrant",
+                       "return drone to home"
+                      ]})))
+\end{lstlisting}
+
+In this example, the programmer is able to use the predefined \prog{takeOff}
+program that (when supplied with a ceiling -- or \prog{down} parameter) causes
+the drone to lift off from the ground at the current spot, and accelerate
+upwards until it reaches the ceiling value. The \prog{grid} constructor
+supplies \prog{takeOff} with the necessary ceiling parameter, but also
+outlines a search grid for the drone (essentially a 100 meter by 100 meter
+square).
+
+\prog{pattern} tells the drone how to cover the prescribed grid, and
+\prog{radial (2 m)} tells the drone to radiate from a given point circling
+2 meters from the previous path with each pass. \prog{fromCenter} is used in
+an ``inline'' fashion for convenience sake, and instructs the drone to begin
+the indicated pattern from the center of the prescribed grid. Which means that
+once the drone takes off, it will fly to the center of the grid, and works
+it's way to the edges using the radial pattern described.
+
+\prog{instructions} provide some tasks for the human actor to complete, and
+are goal-directed in nature. These tasks provide the user some end goal they
+need to reach (as well as some potential guidance if the user encounters
+trouble or diverges from the initial path), but does not specify for the user
+how to complete that goal. Some informational text is provided to the user via
+the user interface at the start of the search, and there are guideposts for
+the user to follow to ensure they are on the correct path as well.
+
 \begin{lstlisting}
-search (takeOff (grid = (north (100 m),east (100 m),down (50 m)))
-        (pattern = radial `fromCenter` (2 m)
-         (instructions { waypoints = [home = center],
-                         goals = ["tag squirrels",
-                                  "suggest new search quadrant",
-                                  "return drone to home"
-                                 ]})))
+searchText :: Interface
+searchText = (information
+              [("tag squirrels",
+                "create a new waypoint"),
+               ("suggest new search quadrant",
+                "use waypoint to re-center quadrant,
+                 or specify new home location"),
+               ("return drone home",
+                "manually fly the drone back to the
+                 home location, or specify new home
+                 location with waypoint")
+               ])
 \end{lstlisting}
 
 

@@ -2,10 +2,11 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 
+\usepackage{cite}
 \usepackage[override]{cmtt}
 \usepackage[inline]{enumitem}
 \usepackage[draft]{hyperref}
-\usepackage{cite}
+\usepackage{microtype}
 
 \usepackage{lambda}
 \renewcommand{\progfontsize}{\normalsize}
@@ -29,7 +30,7 @@
 % \acmPrice{\$15.00}
 % \conferenceinfo{WOODSTOCK}{'97 El Paso, Texas USA}
 
-\title{MICL: a real-time mixed-initaitive drone language}
+\title{A DSL for Mixed-Initaitive Drone Control}
 \subtitle{[Extended Abstract]}
 % \titlenote{A full version of this paper is available as
 % \textit{Author's Guide to Preparing ACM SIG Proceedings Using
@@ -54,18 +55,21 @@ Eric Walkingshaw\\
 
 \maketitle
 \begin{abstract}
-We present an embedded domain-specific language for programming
-semi-autonomous drones, which is based on functional reactive programming and
-has direct application in the use of drones as tools in the scientific and
-consumer communities. This language facilitates the explanations of
-interactions between the system -- represented by the programmer -- and the
-human actor by allowing for a flexible flow of control between the two. We use
-the facilities of the human actor by providing them the ability to directly
-manipulate the course of the drone based on updated information and user
-intuitions. At the same time, we limit the need for programmers to foresee all
-possible contingencies by providing variability around control points within
-the program. In addition MICL utilizes functional reactive programming to
-allow users access to real-time interaction with the system.
+%
+We present a domain-specific language embedded in Haskell for writing
+mixed-initiative programs to pilot semi-autono\-mous drones. The main novelty of
+our language is that it supports a flexible exchange of control flow between a
+pre-programmed auto-pilot and a human pilot with manual flight controls. From
+the DSL programmer's perspective, this exchange is managed by a small set of
+primitives for (synchronously or asynchronously) negotiating initiative. From
+the human pilot's perspective, it is supported by an architecture that
+organizes the program into understandable units organized in a simple control
+flow with contingencies. The design of the high-level architecture is based on
+a formative study of lab protocols, which are effectively programs that must be
+understood and executed by other people.
+%
+Our language runtime is implemented using functional reactive programming.
+%
 \end{abstract}
 
 
@@ -122,137 +126,220 @@ allow users access to real-time interaction with the system.
 
 \section{Introduction}
 \label{sec:intro}
-The number of semi-autonomous controlled vehicles and devices entering the
-consumer and industrial markets has increased sharply in recent years. They
-have become increasingly important research tools in many fields, including
-robotics, computer science, and biology in addition to military
-applications. The majority of programs written to control these devices and
-vehicles are written in low-level languages like \prog{C}, which limits the
-amount of abstraction available to the programmers.
+The consumer and industrial market for unmanned aircraft systems (drones) has
+exploded in recent years, with the Federal Aviation Administration estimating
+that 2.5 million drones will be sold in 2016 in the United States alone
+\cite{FAA16fore}. These vehicles have a wide range of commercial, industrial, and
+scientific applications.
 
-Here we present a domain-specific language embedded in Haskell, intended to
-lift the level of abstraction available to programmers who intend to not only
-utilize the abilities of the control system, but also incorporate human
-input. Unlike previous languages, whose primary intent is to describe a
-program executed strictly by the system, our language allows for more complex
-interplay between the initiatives represented by the system, and the goals
-of the users.
+Drones are also an ideal platform for exploring \emph{mixed-initiative
+computing}~\cite{H99principles}---a model of computation in which human agents
+and software agents negotiate control of a process and collaborate to solve a
+problem.
+%
+Current consumer drone software is already mixed-initiative (usually called
+semi-autonomous, in this context) since aspects of a single flight might be
+controlled remotely by a human pilot and others by an on-board computer. For
+example, a pilot might use a remote control to move a drone around and take
+pictures, while the on-board computer makes stability adjustments, implements a
+stationary hover, and automatically returns to its starting point if it loses
+contact with the pilot.
 
-The specification of a program written in MICL is a description of the
-tasks to be completed by the system, as well as those that require human
-intervention or input (as they are seen by the programmer). In addition
-MICL provides the human actor the opportunity to interleave or
-intersperse their own goals and objectives as well.
+Unfortunately, the majority of programs written for drones are written in
+low-level languages like \prog{C}. This makes it difficult to express more
+sophisticated interactions between the human pilot and the on-board computer,
+and also limits potential drone programmers to experts in embedded systems.
 
-% Surveying as well as search and rescue operations contain elements of mundane
-% tasks that can be accommodated by a programmer directly in addition to tasks
-% that are often more easily and quickly accomplished by a human actor. A survey
-% or search grid can be easily laid out in advance, but there are often
-% unforeseen complications presented by the terrain, as well as deviations in the
-% behavior of the objects or entities being surveyed or sought.
+In this paper, we present a domain-specific language embedded in Haskell for
+writing mixed-initiative flight control programs for drones. The practical goal
+of this language is to raise the level of abstraction for drone programming,
+increasing its accessibility and making feasible new kinds of drone programs
+that better exploit the strengths of both the human and computer actors in this
+mixed-initiative setting.
 
-% These complications can be quickly adapted to by a human actor, whereas
-% programming for such contingencies could prove tedious and incomplete. By
-% placing the facilities of the drone at the disposal of the human actor, while
-% at the same time maintaining a record of the prescribed tasks that can be
-% autonomously executed allows the system to execute more effectively. The user
-% can focus on the less predictable variables presented to the drone during its
-% search pattern, and react to the environmental complications that may or could
-% not have been anticipated by the programmer.
+We are also interested in mixed-initiative computing in general. Previously, we
+conducted a formative study of how people write programs (in the form of lab
+protocols) for other people to execute. From this study, we extracted design
+insights to best support the human agent in a mixed-initiative
+setting~\cite{ABW15prog}.
+%
+Therefore, a higher-level goal of this work is therefore to put these design
+insights to practice, evaluating whether they are actionable and lead to a
+useful language design.
 
-This allows for more generalized flight control programs that are quickly and
-easily adaptable by human actors in the wild. The human user can combine or
-alter flight programs as need dictates, while at the same time remaining
-disconnected from the processes programmed until the need arises, or
-additional information dictates a change.
+Our DSL is implemented using functional reactive programming (FRP), a
+functional programming model based on time-varying behaviors and
+events~\cite{EH97fra,WH00frp}.
 
-MICL provides the programmer the tools necessary to program the more mundane
-tasks that must be executed by the drone to achieve a goal, while at the same
-time providing the human actor with the tools and freedom to make
-modifications to the flight program without jeopardizing the original intent
-of the programmer. Programs are easily recovered or restored to their initial
-settings, but are flexible enough to allow for continued execution if the user
-modifies a flight path or pattern or adds and removes goal-directed tasks.
+The specific contributions of this work are therefore both: (1) the \emph{DSL
+itself}, a high-level declarative language for a rapidly emerging application
+domain, and (2) a new \emph{programming model} for mixed-initiative computing
+that supports sophisticated negotiation of control between human and computer
+agents.
 
-In this paper we introduce an embedded domain-specific language that is
-functionally reactive and allows for the interleaving of human actor
-directives, with those supplied by the programmer. It also allows for timed or
-event based interventions or triggers for further program execution. This
-provides a degree of variability within drone programming that takes into
-account the most up-to-date information and directives as supplied by the
-human actor, while allowing for automation of the process whenever outside
-intervention is unnecessary.
+\section{Mixed-Initiative Computing}
+\label{sec:mic}
 
-% Biological and environmental surveying utilizing drones and other semi-autonomous
-% controlled vehicles contains elements of mundane tasks that are easily
-% relegated to systematic evaluation of a program. However, there are tasks
-% within these routines that benefit from the ability of human actors to quickly
-% identify visual patterns, and process that data into updated actions or
-% directives. Unforeseen complications when laying out a search grid presented
-% by terrain or deviations in the behavior of wildlife being surveyed may
-% necessitate changes to the survey route in real time.
+The fundamental promise of mixed-initiative computing is that humans and
+computers have complementary strengths and weaknesses, and so together can
+solve problems more effectively than either could alone.
+%
+Within the application domain of semi-automated drones (and also more
+generally), computers excel at executing repetitive strategies, performing
+rapid calculations, monitoring many sensors at once, and executing precise
+adjustments. Meanwhile, humans excel at visual recognition, recovering from
+errors, providing high-level oversight, and revising plans in in the presence
+of unforeseen events.
 
-Human actors have been used to identify visual patterns as well as in aerial
-search activities in the form of crowd-sourcing applications
-\cite{quinn2011hc}. Often these tasks come in the form of games, or provide
-some monetary compensation for the user's time in classifying or searching
-images for data. Frameworks for distributing these tasks to the crowd have
-also been developed to assist programmers in developing their queries and
-honing them through successive collections of data obtained from the crowd
-\cite{little2010turkit}.
+The goal of our DSL is to allow programmers to take advantage of these
+complementary strengths. For example, in fully autonomous situations, planning
+for contingencies is a tedious, error-prone, and often incomplete process. A
+mixed-initiative program can instead simply transfer control to the human in
+such an event, relying on their judgment and creativity to recover.
+%
+In our previous work on lab-protocols, we found that when people write complex
+instructions (programs) for other people to execute, they often provide only
+high-level checks to ensure that the person executing the program is still on
+the right track, and leave it up to them to recover,
+otherwise~\cite{ABW15prog}.
 
-One difficulty that is often encountered when using crowd-sourcing for the
-purposes of surveying or search and rescue, is that the queries often take a
-long time to return results. Which can degrade the chances of a successful
-outcome, and can result in the use of outdated information when reacting to
-data collected from participants. To some extent this can be mitigated with
-the use of increased monetary incentives to the crowd participants. In
-addition to timing issues, crowd-sourcing applications often treat humans as
-monetized data processing labor, and fail to take advantage of the crowd's
-facilities beyond visual pattern matching.
+At a higher level, consider a program for either surveying territory or
+conducting a search-and-rescue operations, which are real-world tasks that
+employ drones and exemplify how the strengths of human and computer actors can
+complement each other in a mixed-initiative program. Such a program might have
+the drone automatically traverse an area while the human monitors camera output
+for potential objects of interest, taking over manual control when one is
+found. If, upon closer investigation, the object is not of interest, the human
+can return control to the auto-pilot to resume traversing the area. The
+computer can monitor other sensors (such as proximity and battery), and notify
+the human of significant events. The human can help the drone react to
+unforeseen circumstances and also adjust the high-level parameters of the
+search (e.g.\ expanding or shrinking it) to incorporate new external
+information, as needed.
 
-In MICL, we allow the human actor to directly interact with and manipulate the
-flow of control and the expected outcomes in real time. This provides the
-benefit of making new information gathered by the human actor's visual pattern
-matching skills more readily available in addition to allowing us to take
-advantage of the human actor's skills and knowledge that may supersede that of
-the original goals or programming.
+In our study of lab protocols~\cite{ABW15prog}, we have identified several
+unique aspects of programs written for people compared to programs written for
+computers, and have used related work on how humans \emph{use} plans and
+protocols~\cite{S87plans,L02protocols} to argue that these differences make
+sense given the respective strengths and weaknesses of humans and computers.
+%
+We believe that a mixed-initiative programming language will be most useful if
+it takes both kinds of agents into account.
+%
+Some distinguishing features of programs for people is that they achieve
+flexibility, reusability, and robustness through \emph{simplicity}. The idea is
+that, to execute a plan and adapt it to new situations, a person should be able
+to understand how it works in its entirety. From this perspective, explicit
+error handling actually detracts from the utility of a program since it makes
+it more difficult to understand; it is better to rely on human judgment for
+robustness. Similarly, programs for people are mostly linear with minimal
+branching, looping, or other complex control flow.
+%
+However, human protocols support a rather sophisticated form of composition by
+using common sense to interleave multiple protocols. This can be used in many
+scenarios where a computer program would use conditionals, for example, to
+interleave certain safety measures only when handling certain kinds of
+dangerous materials.
 
-\subsection{Contributions}
-\label{sec:intro:contr}
-The contributions of this work are as follows:
+% In this paper we introduce an embedded domain-specific language that is
+% functionally reactive and allows for the interleaving of human actor
+% directives, with those supplied by the programmer. It also allows for timed or
+% event based interventions or triggers for further program execution. This
+% provides a degree of variability within drone programming that takes into
+% account the most up-to-date information and directives as supplied by the
+% human actor, while allowing for automation of the process whenever outside
+% intervention is unnecessary.
 
-\begin{enumerate}[label=C\arabic*.,ref=C\arabic*,leftmargin=*]
-\item a \emph{description language} for controlling semi-autonomous
-  vehicles and devices that incorporates mundane instruction sets to be
-  executed by the system, as well as \emph{goal-directed} instruction sets to
-  be executed by the user;
-\item an \emph{execution mechanism} for control sequences that allows the
-  negotiation of \emph{flow control} within the defined program between the
-  system and the user, that represents an application of the design insights
-  from previous work on programs for people \cite{abbott2015prog};
-\item an \emph{application} of Functional Reactive Programming to the problem
-  set of Mixed-initiative Execution Systems.
-\end{enumerate}
+% Human actors have been used to identify visual patterns as well as in aerial
+% search activities in the form of crowd-sourcing applications
+% \cite{QB11comp}. Often these tasks come in the form of games, or provide
+% some monetary compensation for the user's time in classifying or searching
+% images for data. Frameworks for distributing these tasks to the crowd have
+% also been developed to assist programmers in developing their queries and
+% honing them through successive collections of data obtained from the crowd
+% \cite{LCGM10turkit}.
 
-In many cases, once a program is generated for a semi-autonomous vehicle or
-device, there is little question of what is \emph{done} with that program once
-it has been written by the programmer. Our approach allows the human actor to
-provide additional insight based on previous experience or current
-circumstances that may not have been considered by the programmer.
+% One difficulty that is often encountered when using crowd-sourcing for the
+% purposes of surveying or search and rescue, is that the queries often take a
+% long time to return results. Which can degrade the chances of a successful
+% outcome, and can result in the use of outdated information when reacting to
+% data collected from participants. To some extent this can be mitigated with
+% the use of increased monetary incentives to the crowd participants. In
+% addition to timing issues, crowd-sourcing applications often treat humans as
+% monetized data processing labor, and fail to take advantage of the crowd's
+% facilities beyond visual pattern matching.
 
-Our approach in MICL is to provide a set of descriptive, strongly typed and
-composable language features. The features are such that the type of the
-resulting execution is evident in the provided features. We provide examples
-of executing the language and show the simulation of moves performed by the
-system, as well as those performed by the human actor.
+% In MICL, we allow the human actor to directly interact with and manipulate the
+% flow of control and the expected outcomes in real time. This provides the
+% benefit of making new information gathered by the human actor's visual pattern
+% matching skills more readily available in addition to allowing us to take
+% advantage of the human actor's skills and knowledge that may supersede that of
+% the original goals or programming.
 
-MICL is an \emph{embedded domain-specific language} within Haskell that
-presents a way for programmers to design mixed-initiative controller programs
-that are strongly typed. Type information for these programs is preserved,
-making it easy to ``stitch'' together existing processes into a larger flow
-for programs, as well as modify the order of events without harming the
-integrity of the overall system-provided goals.
+
+% \subsection{Contributions}
+% \label{sec:intro:contr}
+% The contributions of this work are as follows:
+%
+% In many cases, once a program is generated for a semi-autonomous vehicle or
+% device, there is little question of what is \emph{done} with that program once
+% it has been written by the programmer. Our approach allows the human actor to
+% provide additional insight based on previous experience or current
+% circumstances that may not have been considered by the programmer.
+%
+% Our approach in MICL is to provide a set of descriptive, strongly typed and
+% composable language features. The features are such that the type of the
+% resulting execution is evident in the provided features. We provide examples
+% of executing the language and show the simulation of moves performed by the
+% system, as well as those performed by the human actor.
+%
+% MICL is an \emph{embedded domain-specific language} within Haskell that
+% presents a way for programmers to design mixed-initiative controller programs
+% that are strongly typed. Type information for these programs is preserved,
+% making it easy to ``stitch'' together existing processes into a larger flow
+% for programs, as well as modify the order of events without harming the
+% integrity of the overall system-provided goals.
+
+\section{Language Overview}
+\label{sec:lang}
+
+In this section we provide a brief overview of unique aspects of the DSL (a
+full description will be provided in the pre-proceedings submission).
+
+The main design goal of our DSL is to support a flexible exchange of control
+between the computer and human agents in our mixed-initiative setting. At a
+low-level this is supported through four basic \emph{primitives for negotiating
+control}. Although both agents are always acting in parallel, one can imagine
+``control'' as token that is passed between the two agents; whoever has the
+token has exclusive access to certain functionality, such as moving the drone.
+%
+\begin{itemize}
+%
+\item \textbf{Give}: Executed by the agent with the token to transfer it to the
+other agent. When the computer gives control to the human, it should provide a
+reason for the transfer and any information needed for the human to decide and
+act. When the human gives control to the computer, it should specify where in
+the program to resume executing.
+%
+\item \textbf{Offer}: Executed by the agent with the token to offer a transfer
+of control to the other agent, which the second agent may refuse.
+%
+\item \textbf{Request}: Dual to offer; executed by the agent without the token
+to request it from the currently in-control agent, which the in-control agent
+may refuse.
+%
+\item \textbf{Take}: Dual to give; executed by the agent without the token to
+immediately take it from the in-control agent.
+%
+\end{itemize}
+%
+To minimize the overhead of control negotiation for the human (e.g.\ minimize
+annoying dialogs), offers and requests are asynchronous. That is, an offer of
+control from agent A to agent B will succeed if B has made a request since A's
+last offer, otherwise the runtime system assumes the offer is declined.
+%
+A synchronous offer can be made by giving control and then optionally giving
+control back.
 
 \section{Example}
 \label{sec:example}
@@ -260,7 +347,7 @@ For example, a programmer codes a drone to use a flight pattern to perform
 a search within a prescribed area or boundary, and in addition provides the
 human actor with an intended search target and/or some set of goal-directed
 tasks that need to be accomplished. We know from previous research
-\cite{abbott2015prog} that users adopt human instructions or programs more
+\cite{ABW15prog} that users adopt human instructions or programs more
 readily when they are supplied in a linear fashion (giving the user a
 high-level overview of the process). These instruction sets also need to
 provide users with derivation points that allow them the freedom to modify
@@ -323,38 +410,64 @@ searchText = (information
 
 \section{Related Work}
 \label{sec:related}
-There exist languages and libraries within Haskell that deal with compiling or
-writing \prog{safe-C} code, such as Ivory \cite{elliot2015ivory}, and Copilot
-\cite{pike2010copilot}. Both of these language extensions are designed to be
-used with controllers, and compile \prog{safe-C} code from Haskell that can be
-run directly on current controller hardware.
+% Copilot on the other hand is a runtime system that generates streams of small
+% constant-space and constant-time \prog{C} programs that implement embedded
+% monitoring. Because Copilot also generates its own scheduler, there isn't any
+% need to implement a real-time operating system in conjunction with it.
+
+% Where both of these approaches differ from MICL, is in the availability and
+% representation of interactions between the system and the human actor
+% executing the program. In MICL we treat these interactions as first-class
+% citizens, rather than as an afterthought.
+%
+In Section~\ref{sec:intro}, we mentioned that the majority of programs for
+drones are written in low-level languages like \prog{C}. There is language
+support for writing \prog{safe-C} code available, however there has not been
+much work on providing support for expressing sophisticated interactions
+between the human-pilot and the on-board computer. The closeness of mapping
+between many of the libraries available in Haskell and the \prog{C} language
+they compile to also limits the pool of available drone programmers to those
+who are either experts in the domain, or those who have invested time in
+specializing their programming knowledge.
+
+\TODO{Planned negotiated programming (PNP)} is a formal language for
+representing high-level interactions between the human pilot and the on-board
+computer, and is the basis for the mixed-initiative drone control language as
+well as the programming model we present.
+
+Researchers have called for more flexible flows of control between people and
+computers~\cite{L60symbiosis} as early as 1960. The explicit interleaving
+of human and computer tasks through hardwiring (e.g.~\cite{LHML08cosripter}), allowing
+machine learning searches to be interactively shaped by human users through
+the addition of constraints (e.g.~\cite{LMRS04symbiosis},~\cite{Kea11why}), and
+discourse-based techniques (e.g.~\cite{SRL01collagen},~\cite{ML92explanatory}) are all
+mechanisms for trading initiative that have been explored in the past. This
+prior work has focused on implementing or improving mixed-initiative programs,
+however our work focuses on applying language features behind programs written
+for people to mixed-initiative programming.
+
+Languages and libraries also exist within Haskell for compiling or writing
+\prog{safe-C} code, such as Ivory~\cite{Eea15ivory}, and
+CoPilot~\cite{PGMN10copilot}. Both of these languages are designed to be
+used with controllers, and have been used to write drone programs by compiling
+\prog{safe-C} code from Haskell that can be run directly on current controller
+hardware.
 
 Ivory has been used to implement code that can be run directly on Ardupilot
 hardware, and has been used to generate over 200,000 lines of code for
-SMACCMPilot as well. In addition, this language has been used in Boeing's
-STANAG486 program to pilot an unmanned helicopter through real-world
-situations \cite{boeing2016auto}. Unfortunately the structure of the language
-presented by Ivory can be a bit difficult to decipher at times, and it is
-unknown if the design decision to map the language closely with the compiled
-code represents an additional difficulty for programmers.
+SMACCMPilot~\cite{Hea14build} as well. However, the code generated by
+Ivory for use in SMAACMPilot has largely been contributions by the team who
+designed the language. In addition though, this language has been used in
+Boeing's STANAG486~\cite{B16little} program to pilot an unmanned
+helicopter through real-world situations.
 
-Copilot on the other hand is a runtime system that generates streams of small
-constant-space and constant-time \prog{C} programs that implement embedded
-monitoring. Because Copilot also generates its own scheduler, there isn't any
-need to implement a real-time operating system in conjunction with it.
-
-Where both of these approaches differ from MICL, is in the availability and
-representation of interactions between the system and the human actor
-executing the program. In MICL we treat these interactions as first-class
-citizens, rather than as an afterthought.
-
-\TODO{Short section on where we plan to go with the paper before Aug 22nd. Can
-be a small section written on Monday before we submit. Prototype of the DSL
-working by the 22nd -- and in the near future actually working on a drone.}
-
+Unfortunately the structure of the language presented by Ivory can be a bit
+difficult to decipher at times owing to its intentional closeness of mapping
+with \prog{C}. In turn this creates a barrier for non-experts in the domain of
+drone controller languages.
 
 \bibliographystyle{abbrv}
-\bibliography{droneLanguage}
+\bibliography{droneLanguage,protocolStudy}
 
 
 \end{document}

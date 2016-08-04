@@ -1,76 +1,108 @@
-@string{VLHCC = {{IEEE Int.\ Symp.\ on Visual Languages and Human-Centric Computing (VL/HCC)}}}
-@string{CRV   = {{1st Int.\ Conference on Runtime Verification}}}
+@string{VLHCC  = {{IEEE Int.\ Symp.\ on Visual Languages and Human-Centric Computing (VL/HCC)}}}
+@string{CRV    = {{1st Int.\ Conference on Runtime Verification}}}
+@string{ICFP   = {{ACM SIGPLAN International Conference on Functional Programming}}}
+@string{PLDI   = {{ACM SIGPLAN Conference on Programming Language Design and Implementation}}}
+@string{SIGCHI = {{ACM SIGCHI Conference on Human Factors in Computing Systems}}}
 
-@inproceedings{abbott2015prog,
-  author    = {Abbott, Keeley and Bogart, Christopher and Walkingshaw, Eric},
+@inproceedings{ABW15prog,
   title     = {{Programs for People: What We Can Learn from Lab Protocols}},
+  author    = {Abbott, Keeley and Bogart, Christopher and Walkingshaw, Eric},
   booktitle = VLHCC,
   year      = 2015,
   pages     = {203 -- 211},
 }
 
-@misc{google2016car,
-  author       = {{The X Team}},
-  title        = {{Google Self-Driving Car}},
-  year         = 2016,
-  howpublished = "\url{https://www.google.com/selfdrivingcar/}",
+@techreport{FAA16fore,
+  title       = {{FAA Aerospace Forecast: Fiscal Years 2016--2036}},
+  author      = {FAA},
+  institution = {United States Federal Aviation Administration},
+  number      = {TC16-0002},
+  address     = {Washington, DC, USA},
+  year        = 2016,
+  file        = {http://www.faa.gov/data_research/aviation/aerospace_forecasts/media/FY2016-36_FAA_Aerospace_Forecast.pdf}
 }
 
-@inproceedings{elliot2015ivory,
-  author    = {Elliot, Trevor and Pike, Lee and Winwood, Simon and Hickey, Pat and Bielman, James and Sharp, Jamey and Seidel, Eric and Launchbury, John},
+@inproceedings{Eea15ivory,
   title     = {{Guilt Free Ivory}},
+  author    = {Elliot, Trevor and Pike, Lee and Winwood, Simon and Hickey, Pat and Bielman, James and Sharp, Jamey and Seidel, Eric and Launchbury, John},
   booktitle = {Haskell Symposium},
   year      = 2015,
   pages     = {189 -- 200},
 }
 
-@misc{wikipedia2016dr,
-  author       = {Wikipedia},
+@inproceedings{EH97fra,
+  title     = {{Functional Reactive Animation}},
+  author    = {Elliott, Conal and Hudak, Paul},
+  booktitle = ICFP,
+  year      = 1997,
+  pages     = {263--273}
+}
+
+@inproceedings{WH00frp,
+  title     = {{Functional Reactive Programming from First Principles}},
+  author    = {Wan, Zhanyong and Hudak, Paul},
+  booktitle = PLDI,
+  year      = 2000,
+  pages     = {242--252},
+}
+
+@misc{W16dr,
   title        = {{Dead reckoning -- {W}ikipedia{,} The Free Encyclopedia}},
-  year         = 2016,
+  author       = {Wikipedia},
   howpublished = "\url{https://en.wikipedia.org/wiki/Dead_reckoning}",
   note         = "[Online; accessed 01-June-2016]",
+  year         = 2016,
 }
 
-@misc{wikipedia2016frp,
-  author       = {Wikipedia},
+@misc{W16frp,
   title        = {{Functional reactive programming -- {W}ikipedia{,} The Free Encyclopedia}},
-  year         = 2016,
+  author       = {Wikipedia},
   howpublished = "\url{https://en.wikipedia.org/wiki/Functional_reactive_programming}",
   note         = "[Online; accessed 01-June-2016]",
+  year         = 2016,
 }
 
-@inproceedings{pike2010copilot,
-  author    = {Pike, Lee and Goodloe, Alwyn and Morisset, Robin and Niller, Sebastian},
+@inproceedings{PGMN10copilot,
   title     = {{Copilot: A Hard Real-Time Runtime Monitor}},
+  author    = {Pike, Lee and Goodloe, Alwyn and Morisset, Robin and Niller, Sebastian},
   booktitle = CRV,
-  publisher = {Springer},
   series    = {LNCS},
   year      = 2010,
+  publisher = {Springer},
 }
 
-@misc{boeing2016auto,
-  author       = {{Boeing}},
+@misc{B16little,
   title        = {{Unmanned Little Bird H-6U}},
-  year         = 2016,
+  author       = {{Boeing}},
   howpublished = "\url{http://www.boeing.com/defense/unmanned-little-bird-h-6u}",
   note         = "[Online; accessed 01-June-2016]",
+  year         = 2016,
 }
 
-@inproceedings{little2010turkit,
-  author = {Little, Greg and Chilton, Lydia B and Goldman, Max and Miller, Robert C},
-  title = {Turkit: human computation algorithms on mechanical turk},
-  booktitle = {23rd Annual ACM Symp.\ on User Interface Software and Technology},
+@inproceedings{LCGM10turkit,
+  title        = {Turkit: human computation algorithms on mechanical turk},
+  author       = {Little, Greg and Chilton, Lydia B and Goldman, Max and Miller, Robert C},
+  booktitle    = {23rd Annual ACM Symp.\ on User Interface Software and Technology},
   organization = {ACM},
-  pages = {57--66},
-  year = 2010,
+  pages        = {57--66},
+  year         = 2010,
 }
 
-@inproceedings{quinn2011hc,
-  author = {Quinn, Alexander J and Bederson, Benjamin B},
-  title = {Human Computation: A Survey and Taxonomy of a Growing Field},
-  booktitle = {SIGCHI Conference on Human Factors in Computing Systems},
+@inproceedings{QB11comp,
+  title        = {Human Computation: A Survey and Taxonomy of a Growing Field},
+  author       = {Quinn, Alexander J and Bederson, Benjamin B},
+  booktitle    = SIGCHI,
   organization = {ACM},
-  pages = {1403--1412},
-  year = 2011,
+  pages        = {1403--1412},
+  year         = 2011,
+}
+
+@inproceedings{Hea14build,
+  title        ={Building embedded systems with embedded DSLs},
+  author       ={Hickey, Patrick C and Pike, Lee and Elliott, Trevor and Bielman, James and Launchbury, John},
+  booktitle    ={ACM SIGPLAN Notices},
+  organization ={ACM},
+  volume       ={49(9)},
+  pages        ={3--9},
+  year         =2014,
 }

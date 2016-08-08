@@ -126,6 +126,7 @@ Our language runtime is implemented using functional reactive programming.
 
 \section{Introduction}
 \label{sec:intro}
+
 The consumer and industrial market for unmanned aircraft systems (drones) has
 exploded in recent years, with the Federal Aviation Administration estimating
 that 2.5 million drones will be sold in 2016 in the United States alone
@@ -300,49 +301,11 @@ dangerous materials.
 % for programs, as well as modify the order of events without harming the
 % integrity of the overall system-provided goals.
 
-\section{Language Overview}
-\label{sec:lang}
-
-In this section we provide a brief overview of unique aspects of the DSL (a
-full description will be provided in the pre-proceedings submission).
-
-The main design goal of our DSL is to support a flexible exchange of control
-between the computer and human agents in our mixed-initiative setting. At a
-low-level this is supported through four basic \emph{primitives for negotiating
-control}. Although both agents are always acting in parallel, one can imagine
-``control'' as token that is passed between the two agents; whoever has the
-token has exclusive access to certain functionality, such as moving the drone.
-%
-\begin{itemize}
-%
-\item \textbf{Give}: Executed by the agent with the token to transfer it to the
-other agent. When the computer gives control to the human, it should provide a
-reason for the transfer and any information needed for the human to decide and
-act. When the human gives control to the computer, it should specify where in
-the program to resume executing.
-%
-\item \textbf{Offer}: Executed by the agent with the token to offer a transfer
-of control to the other agent, which the second agent may refuse.
-%
-\item \textbf{Request}: Dual to offer; executed by the agent without the token
-to request it from the currently in-control agent, which the in-control agent
-may refuse.
-%
-\item \textbf{Take}: Dual to give; executed by the agent without the token to
-immediately take it from the in-control agent.
-%
-\end{itemize}
-%
-To minimize the overhead of control negotiation for the human (e.g.\ minimize
-annoying dialogs), offers and requests are asynchronous. That is, an offer of
-control from agent A to agent B will succeed if B has made a request since A's
-last offer, otherwise the runtime system assumes the offer is declined.
-%
-A synchronous offer can be made by giving control and then optionally giving
-control back.
+\TODO{Functional Reactive Programming Section}
 
 \section{Example}
 \label{sec:example}
+
 For example, a programmer codes a drone to use a flight pattern to perform
 a search within a prescribed area or boundary, and in addition provides the
 human actor with an intended search target and/or some set of goal-directed
@@ -355,17 +318,7 @@ instructions as needed, while simultaneously providing guideposts for error
 recovery and locations to return to the original protocol.
 
 \begin{lstlisting}[breaklines=true]
-search :: Program
-search = (takeOff (grid = (north (100 m),
-                           east (100 m),
-                           down (50 m)))
-          (pattern = radial `fromCenter` (2 m)
-           (instructions
-            { waypoints = [home = center],
-              goals = ["tag squirrels",
-                       "suggest new search quadrant",
-                       "return drone to home"
-                      ]})))
+give = \p $\arrow$ catchError p give
 \end{lstlisting}
 
 In this example, the programmer is able to use the predefined \prog{takeOff}
@@ -407,6 +360,49 @@ searchText = (information
                ])
 \end{lstlisting}
 
+\section{Language Overview}
+\label{sec:lang}
+
+In this section we provide a brief overview of unique aspects of the DSL (a
+full description will be provided in the pre-proceedings submission).
+
+The main design goal of our DSL is to support a flexible exchange of control
+between the computer and human agents in our mixed-initiative setting. At a
+low-level this is supported through four basic \emph{primitives for negotiating
+control}. Although both agents are always acting in parallel, one can imagine
+``control'' as token that is passed between the two agents; whoever has the
+token has exclusive access to certain functionality, such as moving the drone.
+%
+\begin{itemize}
+%
+\item \textbf{Give}: Executed by the agent with the token to transfer it to the
+other agent. When the computer gives control to the human, it should provide a
+reason for the transfer and any information needed for the human to decide and
+act. When the human gives control to the computer, it should specify where in
+the program to resume executing.
+%
+\item \textbf{Offer}: Executed by the agent with the token to offer a transfer
+of control to the other agent, which the second agent may refuse.
+%
+\item \textbf{Request}: Dual to offer; executed by the agent without the token
+to request it from the currently in-control agent, which the in-control agent
+may refuse.
+%
+\item \textbf{Take}: Dual to give; executed by the agent without the token to
+immediately take it from the in-control agent.
+%
+\end{itemize}
+%
+To minimize the overhead of control negotiation for the human (e.g.\ minimize
+annoying dialogs), offers and requests are asynchronous. That is, an offer of
+control from agent A to agent B will succeed if B has made a request since A's
+last offer, otherwise the runtime system assumes the offer is declined.
+%
+A synchronous offer can be made by giving control and then optionally giving
+control back.
+
+\TODO{Results section -- something having to do with not being able to have
+deadlock issues in the negotiation process.}
 
 \section{Related Work}
 \label{sec:related}
@@ -437,14 +433,15 @@ well as the programming model we present.
 
 Researchers have called for more flexible flows of control between people and
 computers~\cite{L60symbiosis} as early as 1960. The explicit interleaving
-of human and computer tasks through hardwiring (e.g.~\cite{LHML08cosripter}), allowing
-machine learning searches to be interactively shaped by human users through
-the addition of constraints (e.g.~\cite{LMRS04symbiosis},~\cite{Kea11why}), and
-discourse-based techniques (e.g.~\cite{SRL01collagen},~\cite{ML92explanatory}) are all
-mechanisms for trading initiative that have been explored in the past. This
-prior work has focused on implementing or improving mixed-initiative programs,
-however our work focuses on applying language features behind programs written
-for people to mixed-initiative programming.
+of human and computer tasks through hardwiring (e.g.~\cite{LHML08cosripter}),
+allowing machine learning searches to be interactively shaped by human users
+through the addition of constraints
+(e.g.~\cite{LMRS04symbiosis},~\cite{Kea11why}), and discourse-based techniques
+(e.g.~\cite{SRL01collagen},~\cite{ML92explanatory}) are all mechanisms for
+trading initiative that have been explored in the past. This prior work has
+focused on implementing or improving mixed-initiative programs, however our
+work focuses on applying language features behind programs written for people
+to mixed-initiative programming.
 
 Languages and libraries also exist within Haskell for compiling or writing
 \prog{safe-C} code, such as Ivory~\cite{Eea15ivory}, and
@@ -465,6 +462,9 @@ Unfortunately the structure of the language presented by Ivory can be a bit
 difficult to decipher at times owing to its intentional closeness of mapping
 with \prog{C}. In turn this creates a barrier for non-experts in the domain of
 drone controller languages.
+
+\section{Conclusion}
+\label{sec:conclusion}
 
 \bibliographystyle{abbrv}
 \bibliography{droneLanguage,protocolStudy}

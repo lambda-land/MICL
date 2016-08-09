@@ -1,4 +1,4 @@
-module Demo where
+module KeyDemo where
 
 import Control.Monad (when)
 import System.IO (hSetEcho,stdin)

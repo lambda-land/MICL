@@ -11,4 +11,4 @@ library
     base,
     reactive-banana
   exposed-modules:
-    Demo
+    KeyDemo

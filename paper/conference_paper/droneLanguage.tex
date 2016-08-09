@@ -7,10 +7,10 @@
 \usepackage[inline]{enumitem}
 \usepackage[draft]{hyperref}
 \usepackage{microtype}
+\usepackage{color}
 
 \usepackage{lambda}
 \renewcommand{\progfontsize}{\normalsize}
-
 \usepackage{listings}
 
 \lstset{
@@ -31,8 +31,8 @@
 % \acmPrice{\$15.00}
 % \conferenceinfo{WOODSTOCK}{'97 El Paso, Texas USA}
 
-\title{A DSL for Mixed-Initiative Drone Control}
-\subtitle{[Extended Abstract]}
+\title{A DSL for Mixed-Initaitive Drone Control}
+% \subtitle{[Extended Abstract]}
 % \titlenote{A full version of this paper is available as
 % \textit{Author's Guide to Preparing ACM SIG Proceedings Using
 % \LaTeX$2_\epsilon$\ and BibTeX} at
@@ -55,7 +55,6 @@ Eric Walkingshaw\\
 }
 
 \maketitle
-
 \begin{abstract}
 %
 We present a domain-specific language embedded in Haskell for writing
@@ -132,11 +131,11 @@ Our language runtime is implemented using functional reactive programming.
 The consumer and industrial market for unmanned aircraft systems (drones) has
 exploded in recent years, with the Federal Aviation Administration estimating
 that 2.5 million drones will be sold in 2016 in the United States alone
-\cite{FAA2016}. These vehicles have a wide range of commercial, industrial, and
+\cite{FAA16fore}. These vehicles have a wide range of commercial, industrial, and
 scientific applications.
 
 Drones are also an ideal platform for exploring \emph{mixed-initiative
-computing}~\cite{Horvitz1999}---a model of computation in which human agents
+computing}~\cite{H99principles}---a model of computation in which human agents
 and software agents negotiate control of a process and collaborate to solve a
 problem.
 %
@@ -164,11 +163,11 @@ We are also interested in mixed-initiative computing in general. Previously, we
 conducted a formative study of how people write programs (in the form of lab
 protocols) for other people to execute. From this study, we extracted design
 insights to best support the human agent in a mixed-initiative
-setting~\cite{abbott2015prog}.
+setting~\cite{ABW15prog}.
 %
-Therefore, a higher-level goal of this work is therefore to put these design
-insights to practice, evaluating whether they are actionable and lead to a
-useful language design.
+Therefore, a higher-level goal of this work is to put these design insights to
+practice, evaluating whether they are actionable and lead to a useful language
+design.
 
 Our DSL is implemented using functional reactive programming (FRP), a
 functional programming model based on time-varying behaviors and
@@ -180,9 +179,8 @@ domain, and (2) a new \emph{programming model} for mixed-initiative computing
 that supports sophisticated negotiation of control between human and computer
 agents.
 
-
-\section{Mixed-Initiative Computing}
-\label{sec:mic}
+\subsection{Mixed-Initiative Computing}
+\label{sec:intro:mic}
 
 The fundamental promise of mixed-initiative computing is that humans and
 computers have complementary strengths and weaknesses, and so together can
@@ -205,7 +203,7 @@ In our previous work on lab-protocols, we found that when people write complex
 instructions (programs) for other people to execute, they often provide only
 high-level checks to ensure that the person executing the program is still on
 the right track, and leave it up to them to recover,
-otherwise~\cite{abbott2015prog}.
+otherwise~\cite{ABW15prog}.
 
 At a higher level, consider a program for either surveying territory or
 conducting a search-and-rescue operations, which are real-world tasks that
@@ -221,10 +219,10 @@ unforeseen circumstances and also adjust the high-level parameters of the
 search (e.g.\ expanding or shrinking it) to incorporate new external
 information, as needed.
 
-In our study of lab protocols~\cite{abbott2015prog}, we have identified several
+In our study of lab protocols~\cite{ABW15prog}, we have identified several
 unique aspects of programs written for people compared to programs written for
 computers, and have used related work on how humans \emph{use} plans and
-protocols~\cite{Suchman1987,Lynch2002} to argue that these differences make
+protocols~\cite{S87plans,L02protocols} to argue that these differences make
 sense given the respective strengths and weaknesses of humans and computers.
 %
 We believe that a mixed-initiative programming language will be most useful if
@@ -256,12 +254,12 @@ dangerous materials.
 
 % Human actors have been used to identify visual patterns as well as in aerial
 % search activities in the form of crowd-sourcing applications
-% \cite{quinn2011hc}. Often these tasks come in the form of games, or provide
+% \cite{QB11comp}. Often these tasks come in the form of games, or provide
 % some monetary compensation for the user's time in classifying or searching
 % images for data. Frameworks for distributing these tasks to the crowd have
 % also been developed to assist programmers in developing their queries and
 % honing them through successive collections of data obtained from the crowd
-% \cite{little2010turkit}.
+% \cite{LCGM10turkit}.
 
 % One difficulty that is often encountered when using crowd-sourcing for the
 % purposes of surveying or search and rescue, is that the queries often take a
@@ -284,19 +282,19 @@ dangerous materials.
 % \subsection{Contributions}
 % \label{sec:intro:contr}
 % The contributions of this work are as follows:
-% 
+%
 % In many cases, once a program is generated for a semi-autonomous vehicle or
 % device, there is little question of what is \emph{done} with that program once
 % it has been written by the programmer. Our approach allows the human actor to
 % provide additional insight based on previous experience or current
 % circumstances that may not have been considered by the programmer.
-% 
+%
 % Our approach in MICL is to provide a set of descriptive, strongly typed and
 % composable language features. The features are such that the type of the
 % resulting execution is evident in the provided features. We provide examples
 % of executing the language and show the simulation of moves performed by the
 % system, as well as those performed by the human actor.
-% 
+%
 % MICL is an \emph{embedded domain-specific language} within Haskell that
 % presents a way for programmers to design mixed-initiative controller programs
 % that are strongly typed. Type information for these programs is preserved,
@@ -304,12 +302,56 @@ dangerous materials.
 % for programs, as well as modify the order of events without harming the
 % integrity of the overall system-provided goals.
 
+% \TODO{Functional Reactive Programming Section}
+
+\subsection{Functional Reactive Programming (FRP)}
+\label{sec:intro:frp}
+
+Functional Reactive Programming (FRP)~\cite{H00haskell,WH00frp} is a
+high-level declarative language implemented in Haskell~\cite{Hea92report} for
+the purpose of programming reactive systems. \emph{Reactive systems} process
+and react to external input throughout execution.
+
+The two fundamental types in FRP are the \prog{Behavior} and \prog{Event}
+types. Behaviors represent values that are reactions to events, and can be
+viewed as a stream that can change over continuous time. In turn FRP programs
+can be thought of as stream transformers. In other words FRP programs are
+\emph{reactions} to the current state of the system. Events are time-ordered
+sequences of discrete event occurrences. These can include events such as
+discreet button or keyboard presses, and represent the entire \emph{sequence}
+of events of the respective type as opposed to individual event instances of
+that type.
+
+The reactive nature of FRP lends itself to application in domains such as
+interactive computer animation~\cite{EH97functional}, graphical interface
+design~\cite{CE01genuinely}, computer vision~\cite{RPHH99prototyping},
+robotics~\cite{PHH99language}, and control systems~\cite{WTH02event}.
+
+In our DSL the goal is to provide programmers with the constructs necessary to
+accommodate exactly this type of reactive programming. We can then take
+advantage of the strengths of both human and computers as described in
+section~\ref{sec:intro:mic}. FRP programs can easily negotiate the transfer of
+control between the human and the system, while providing the high-level
+checks expected in programs written for people. In this way the programmer can
+avoid unnecessary error checking by leaving it to the user to recover when
+possible, while providing guidelines for making progress.
+
+Returning to the higher level example of programs for surveying territory or
+conducting a search-and-rescue operations. A program written for either of
+these purposes can be fairly easily divided into tasks and assigned to the
+user or the system as described in section~\ref{sec:intro:mic}. In order to
+accommodate the switching described the user is provided with a manual set of
+controls, whose events and behaviors can be monitored, and when key events
+or behaviors are observed allow the system to react to the changed state.
+
+\subsection{Multi-Agent Systems}
+\label{sec:intro:mas}
 
 \section{Language Overview}
 \label{sec:lang}
 
-In this section we provide a brief overview of unique aspects of the DSL (a
-full description will be provided in the pre-proceedings submission).
+In this section we provide an overview of unique aspects of the DSL, as well
+as a complete description of its technical functionality.
 
 The main design goal of our DSL is to support a flexible exchange of control
 between the computer and human agents in our mixed-initiative setting. At a
@@ -346,107 +388,163 @@ last offer, otherwise the runtime system assumes the offer is declined.
 A synchronous offer can be made by giving control and then optionally giving
 control back.
 
-
-
-\iffalse
-\section{Example}
+\section{Motivating Example}
 \label{sec:example}
-For example, a programmer codes a drone to use a flight pattern to perform
-a search within a prescribed area or boundary, and in addition provides the
-human actor with an intended search target and/or some set of goal-directed
-tasks that need to be accomplished. We know from previous research
-\cite{abbott2015prog} that users adopt human instructions or programs more
-readily when they are supplied in a linear fashion (giving the user a
-high-level overview of the process). These instruction sets also need to
-provide users with derivation points that allow them the freedom to modify
-instructions as needed, while simultaneously providing guideposts for error
-recovery and locations to return to the original protocol.
 
-\begin{lstlisting}[breaklines=true]
-search :: Program
-search = (takeOff (grid = (north (100 m),
-                           east (100 m),
-                           down (50 m)))
-          (pattern = radial `fromCenter` (2 m)
-           (instructions
-            { waypoints = [home = center],
-              goals = ["tag squirrels",
-                       "suggest new search quadrant",
-                       "return drone to home"
-                      ]})))
-\end{lstlisting}
+\TODO{Motivating example -- extended example of a search-and-rescue or
+territorial surveying program}
 
-In this example, the programmer is able to use the predefined \prog{takeOff}
-program that (when supplied with a ceiling -- or \prog{down} parameter) causes
-the drone to lift off from the ground at the current spot, and accelerate
-upwards until it reaches the ceiling value. The \prog{grid} constructor
-supplies \prog{takeOff} with the necessary ceiling parameter, but also
-outlines a search grid for the drone (essentially a 100 meter by 100 meter
-square).
+% For example, a programmer codes a drone to use a flight pattern to perform
+% a search within a prescribed area or boundary, and in addition provides the
+% human actor with an intended search target and/or some set of goal-directed
+% tasks that need to be accomplished. We know from previous research
+% \cite{ABW15prog} that users adopt human instructions or programs more
+% readily when they are supplied in a linear fashion (giving the user a
+% high-level overview of the process). These instruction sets also need to
+% provide users with derivation points that allow them the freedom to modify
+% instructions as needed, while simultaneously providing guideposts for error
+% recovery and locations to return to the original protocol.
 
-\prog{pattern} tells the drone how to cover the prescribed grid, and
-\prog{radial (2 m)} tells the drone to radiate from a given point circling
-2 meters from the previous path with each pass. \prog{fromCenter} is used in
-an ``inline'' fashion for convenience sake, and instructs the drone to begin
-the indicated pattern from the center of the prescribed grid. Which means that
-once the drone takes off, it will fly to the center of the grid, and works
-it's way to the edges using the radial pattern described.
+% \begin{lstlisting}[breaklines=true]
+% give = \p $\arrow$ catchError p give
+% \end{lstlisting}
 
-\prog{instructions} provide some tasks for the human actor to complete, and
-are goal-directed in nature. These tasks provide the user some end goal they
-need to reach (as well as some potential guidance if the user encounters
-trouble or diverges from the initial path), but does not specify for the user
-how to complete that goal. Some informational text is provided to the user via
-the user interface at the start of the search, and there are guideposts for
-the user to follow to ensure they are on the correct path as well.
+% In this example, the programmer is able to use the predefined \prog{takeOff}
+% program that (when supplied with a ceiling -- or \prog{down} parameter) causes
+% the drone to lift off from the ground at the current spot, and accelerate
+% upwards until it reaches the ceiling value. The \prog{grid} constructor
+% supplies \prog{takeOff} with the necessary ceiling parameter, but also
+% outlines a search grid for the drone (essentially a 100 meter by 100 meter
+% square).
 
-\begin{lstlisting}
-searchText :: Interface
-searchText = (information
-              [("tag squirrels",
-                "create a new waypoint"),
-               ("suggest new search quadrant",
-                "use waypoint to re-center quadrant,
-                 or specify new home location"),
-               ("return drone home",
-                "manually fly the drone back to the
-                 home location, or specify new home
-                 location with waypoint")
-               ])
-\end{lstlisting}
-\fi
+% \prog{pattern} tells the drone how to cover the prescribed grid, and
+% \prog{radial (2 m)} tells the drone to radiate from a given point circling
+% 2 meters from the previous path with each pass. \prog{fromCenter} is used in
+% an ``inline'' fashion for convenience sake, and instructs the drone to begin
+% the indicated pattern from the center of the prescribed grid. Which means that
+% once the drone takes off, it will fly to the center of the grid, and works
+% it's way to the edges using the radial pattern described.
 
+% \prog{instructions} provide some tasks for the human actor to complete, and
+% are goal-directed in nature. These tasks provide the user some end goal they
+% need to reach (as well as some potential guidance if the user encounters
+% trouble or diverges from the initial path), but does not specify for the user
+% how to complete that goal. Some informational text is provided to the user via
+% the user interface at the start of the search, and there are guideposts for
+% the user to follow to ensure they are on the correct path as well.
+
+% \begin{lstlisting}
+% searchText :: Interface
+% searchText = (information
+%               [("tag squirrels",
+%                 "create a new waypoint"),
+%                ("suggest new search quadrant",
+%                 "use waypoint to re-center quadrant,
+%                  or specify new home location"),
+%                ("return drone home",
+%                 "manually fly the drone back to the
+%                  home location, or specify new home
+%                  location with waypoint")
+%                ])
+% \end{lstlisting}
+
+\section{Results}
+\label{sec:results}
+
+\TODO{Results section -- something having to do with not being able to have
+deadlock issues in the negotiation process.}
 
 \section{Related Work}
 \label{sec:related}
-There exist languages and libraries within Haskell that deal with compiling or
-writing \prog{safe-C} code, such as Ivory \cite{elliot2015ivory}, and Copilot
-\cite{pike2010copilot}. Both of these language extensions are designed to be
-used with controllers, and compile \prog{safe-C} code from Haskell that can be
-run directly on current controller hardware.
+
+In Section~\ref{sec:intro}, we mentioned that the majority of programs for
+drones are written in low-level languages like \prog{C}. There is language
+support for writing \prog{safe-C} code available, however there has not been
+much work on providing support for expressing sophisticated interactions
+between the human-pilot and the on-board computer. The closeness of mapping
+between many of the libraries available in Haskell and the \prog{C} language
+they compile to also limits the pool of available drone programmers to those
+who are either experts in the domain, or those who have invested time in
+specializing their programming knowledge.
+
+\TODO{Planned negotiated programming (PNP)} is a formal language for
+representing high-level interactions between the human pilot and the on-board
+computer, and is the basis for the mixed-initiative drone control language as
+well as the programming model we present.
+
+Researchers have called for more flexible flows of control between people and
+computers~\cite{L60symbiosis} as early as 1960. The explicit interleaving
+of human and computer tasks through hardwiring (e.g.~\cite{LHML08cosripter}),
+allowing machine learning searches to be interactively shaped by human users
+through the addition of constraints
+(e.g.~\cite{LMRS04symbiosis},~\cite{Kea11why}), and discourse-based techniques
+(e.g.~\cite{SRL01collagen},~\cite{ML92explanatory}) are all mechanisms for
+trading initiative that have been explored in the past. This prior work has
+focused on implementing or improving mixed-initiative programs, however our
+work focuses on applying language features behind programs written for people
+to mixed-initiative programming.
+
+Languages and libraries also exist within Haskell for compiling or writing
+\prog{safe-C} code, such as Ivory~\cite{Eea15ivory}, and
+CoPilot~\cite{PGMN10copilot}. Both of these languages are designed to be
+used with controllers, and have been used to write drone programs by compiling
+\prog{safe-C} code from Haskell that can be run directly on current controller
+hardware.
 
 Ivory has been used to implement code that can be run directly on Ardupilot
 hardware, and has been used to generate over 200,000 lines of code for
-SMACCMPilot as well. In addition, this language has been used in Boeing's
-STANAG486 program to pilot an unmanned helicopter through real-world
-situations \cite{boeing2016auto}. Unfortunately the structure of the language
-presented by Ivory can be a bit difficult to decipher at times, and it is
-unknown if the design decision to map the language closely with the compiled
-code represents an additional difficulty for programmers.
+SMACCMPilot~\cite{Hea14build} as well. However, the code generated by
+Ivory for use in SMAACMPilot has largely been contributions by the team who
+designed the language. In addition though, this language has been used in
+Boeing's STANAG486~\cite{B16little} program to pilot an unmanned
+helicopter through real-world situations.
 
-Copilot on the other hand is a runtime system that generates streams of small
-constant-space and constant-time \prog{C} programs that implement embedded
-monitoring. Because Copilot also generates its own scheduler, there isn't any
-need to implement a real-time operating system in conjunction with it.
+% Unfortunately the structure of the language presented by Ivory can be a bit
+% difficult to decipher at times owing to its intentional closeness of mapping
+% with \prog{C}. In turn this creates a barrier for non-experts in the domain of
+% drone controller languages.
 
-Where both of these approaches differ from MICL, is in the availability and
-representation of interactions between the system and the human actor
-executing the program. In MICL we treat these interactions as first-class
-citizens, rather than as an afterthought.
+The structure of Ivory maps very closely with \prog{C}, and requires the use
+of ``structure decorations'' to accomplish this. Although this close
+correspondence intentionally evokes \prog{C}, it would be reasonable to assume
+this method of implementing Ivory creates some barriers for non-experts
+in the domain of drone controller languages.
 
-\TODO{Short section on where we plan to go with the paper before Aug 22nd. Can
-be a small section written on Monday before we submit. Prototype of the DSL
-working by the 22nd -- and in the near future actually working on a drone.}
+% Copilot on the other hand is a runtime system that generates streams of small
+% constant-space and constant-time \prog{C} programs that implement embedded
+% monitoring. Because Copilot also generates its own scheduler, there isn't any
+% need to implement a real-time operating system in conjunction with it.
+
+CoPilot is another approach to dealing with \prog{safe-C} programming. This
+stream-based dataflow language generates small constant-time and
+constant-space \prog{C} programs that implement embedded
+monitors. Constant-space programming means that no dynamic memory allocations
+are needed. CoPilot periodically samples global variables of the program or
+programs; following a sampling-based monitoring strategy. The language itself
+provides mechanisms for controlling when to observe the variables.
+
+By using the Atom compiler~\cite{H08controlling} for its back-end, CoPilot can
+also automatically generate its own periodic schedule. This negates the need
+for a real-time operating system in order to control scheduling and
+concurrency, allowing CoPilot to be easily executed on embedded hardware with
+minimal system resource availability.
+
+\TODO{Find some examples of Multi-Agent Systems that are comparable to our
+DSL.}
+
+Where both of these approaches differ from our DSL, is in the availability and
+representation of interactions between the human and the system executing the
+program. In our DSL we treat these interactions as first-class citizens,
+rather than as an afterthought.
+
+\section{Future Work}
+\label{sec:future}
+
+
+
+\section{Conclusion}
+\label{sec:conclusion}
+
 
 
 \bibliographystyle{abbrv}
